@@ -2,9 +2,5 @@
 
 A custom game engine project.
 
----
-
-## Status
-
 ## Notes
 This project is in its early stages. Expect frequent changes as the core systems are developed.
