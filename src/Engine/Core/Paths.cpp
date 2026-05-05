@@ -45,7 +45,7 @@ std::filesystem::path Paths::GetExecutableDirectory() const
 #elif defined(__linux__)
     char buffer[PATH_MAX];
 
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    ssize_t const len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
     if (len <= 0)
         return std::filesystem::current_path(); // fallback safety
 
