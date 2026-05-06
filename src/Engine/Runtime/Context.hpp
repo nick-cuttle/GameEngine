@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Engine/Core/Logger.hpp>
 #include <Engine/Core/Paths.hpp>
 
 namespace Engine
@@ -21,6 +22,7 @@ class Context
 
     /// @brief Engine-wide filesystem paths initialized during context startup.
     Paths paths;
-    /// @todo Add logging here
+    /// @brief Engine-wide logger initialized during context startup.
+    Logger logger;
 };
 } // namespace Engine

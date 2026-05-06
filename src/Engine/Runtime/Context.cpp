@@ -13,6 +13,11 @@ namespace Engine
 void Context::initialize()
 {
     paths.initialize();
+
+    // intialize logger
+    Logger::Config loggerConfig;
+    loggerConfig.logDirectory = paths.logs();
+    logger.init(loggerConfig);
 }
 
 } // namespace Engine
