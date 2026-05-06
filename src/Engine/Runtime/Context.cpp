@@ -14,10 +14,10 @@ void Context::initialize()
 {
     paths.initialize();
 
-    // intialize logger
+    // initialize logger
     Logger::Config loggerConfig;
     loggerConfig.logDirectory = paths.logs();
-    logger.init(loggerConfig);
+    logger.initialize(loggerConfig);
 }
 
 } // namespace Engine

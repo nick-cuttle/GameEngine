@@ -23,7 +23,7 @@ class Logger
 
     /// @brief Initializes the logger with the specified configuration.
     /// @param[in] config The configuration for the logger.
-    void init(Config const &config);
+    void initialize(Config const &config);
 
     /// @brief Gets the root logger instance from which all subsystem loggers are derived.
     /// @details This is the base Engine logger.

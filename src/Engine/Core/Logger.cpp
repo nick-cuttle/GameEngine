@@ -16,7 +16,7 @@
 namespace Engine
 {
 
-void Logger::init(Config const &config)
+void Logger::initialize(Config const &config)
 {
     std::filesystem::create_directories(config.logDirectory);
 
