@@ -13,7 +13,7 @@ namespace Engine
 void Context::Init()
 {
     // initialize paths.
-    Paths.Init();
+    EnginePaths.Init();
 }
 
 } // namespace Engine

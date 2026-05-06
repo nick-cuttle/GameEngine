@@ -19,7 +19,8 @@ class Context
     /// @brief Initializes the engine context, including paths.
     void Init();
 
-    Paths Paths;
+    /// @brief Engine-wide filesystem paths initialized during context startup.
+    Paths EnginePaths;
     /// @todo Add logging here
 };
 } // namespace Engine
