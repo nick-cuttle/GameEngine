@@ -19,9 +19,9 @@ class Paths
                                             // empty, will use executable directory.
     };
 
-    /// @brief      Initializes the paths.
+    /// @brief      Initializes engine filesystem paths.
     /// @param[in]  config Configuration for initializing paths.
-    void init(Config const &config = {});
+    void initialize(Config const &config = {});
 
     /// @brief Gets the Base Path
     /// @return The base path for the engine, which is the directory of the executable or an

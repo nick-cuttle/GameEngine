@@ -16,10 +16,17 @@ target_include_directories(Engine PUBLIC
 )
 
 # Set compiler warnings for the Engine library.
-target_compile_options(Engine PRIVATE
-    -Wall
-    -Werror
-)
+if(MSVC)
+    target_compile_options(Engine PRIVATE /W4)
+    if(ENGINE_WARNINGS_AS_ERRORS)
+        target_compile_options(Engine PRIVATE /WX)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(Engine PRIVATE -Wall -Wextra -Wpedantic)
+    if(ENGINE_WARNINGS_AS_ERRORS)
+        target_compile_options(Engine PRIVATE -Werror)
+    endif()
+endif()
 
 # create executable
 add_executable(GameEngine main.cpp)
