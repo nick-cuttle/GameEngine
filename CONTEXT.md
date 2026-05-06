@@ -75,10 +75,12 @@ _Avoid_: Window loop, renderer loop
 - The **Input System** owns input concerns even when platform input events arrive through the same polling source as **Window Events**.
 - The **Runtime Loop** coordinates the **Window System** and **Renderer** each frame.
 - A **Renderer** presents frames through a **Graphics Surface** associated with a window.
+- A **Renderer** may present through more than one **Graphics Surface**.
 - A **Renderer** obtains **Graphics Surfaces** through a **Graphics Surface Factory**.
 - A **Renderer** uses a **Rendering Backend** such as OpenGL today or Vulkan later.
 - A **Renderer** owns presentation operations for its **Graphics Surface**.
 - A **Window System** must not own backend rendering commands.
+- A **Renderer** must release a **Graphics Surface** before the **Window System** destroys the associated window.
 
 ## Example Dialogue
 
