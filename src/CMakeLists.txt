@@ -22,6 +22,7 @@ set(ENGINE_SOURCES
     Engine/Core/Paths.cpp
     Engine/Core/Logger.cpp
     Engine/Runtime/Context.cpp
+    Engine/Windowing/WindowSystem.cpp
 )
 
 # Make a library so external projects can link to it if needed.
@@ -48,8 +49,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     endif()
 endif()
 
+find_package(SDL3 REQUIRED CONFIG)
+
 # create executable
 add_executable(GameEngine main.cpp)
 
 # link main executable to Engine library
-target_link_libraries(GameEngine PRIVATE Engine)
+target_link_libraries(GameEngine PRIVATE Engine SDL3::SDL3)
