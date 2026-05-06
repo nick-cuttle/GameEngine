@@ -17,10 +17,10 @@ class Context
 {
   public:
     /// @brief Initializes the engine context, including paths.
-    void Init();
+    void init();
 
     /// @brief Engine-wide filesystem paths initialized during context startup.
-    Paths EnginePaths;
+    Paths paths;
     /// @todo Add logging here
 };
 } // namespace Engine

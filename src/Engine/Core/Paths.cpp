@@ -1,9 +1,6 @@
 /**
  * @file  Paths.cpp
  * @brief Implements the Paths class, which manages file paths for the engine.
- *
- *
- *
  */
 
 #include "Paths.hpp"
@@ -18,12 +15,12 @@
 namespace Engine
 {
 
-void Paths::Init(Config const &config)
+void Paths::init(Config const &config)
 {
-    if (!config.BaseOverride.empty())
-        m_Base = config.BaseOverride;
+    if (!config.baseOverride.empty())
+        m_Base = config.baseOverride;
     else
-        m_Base = GetExecutableDirectory();
+        m_Base = getExecutableDirectory();
 
     m_Logs = m_Base / "logs";
     m_Assets = m_Base / "assets";
@@ -31,11 +28,11 @@ void Paths::Init(Config const &config)
     std::filesystem::create_directories(m_Logs);
 }
 
-std::filesystem::path const &Paths::Base() const { return m_Base; }
-std::filesystem::path const &Paths::Logs() const { return m_Logs; }
-std::filesystem::path const &Paths::Assets() const { return m_Assets; }
+std::filesystem::path const &Paths::base() const { return m_Base; }
+std::filesystem::path const &Paths::logs() const { return m_Logs; }
+std::filesystem::path const &Paths::assets() const { return m_Assets; }
 
-std::filesystem::path Paths::GetExecutableDirectory() const
+std::filesystem::path Paths::getExecutableDirectory() const
 {
 #ifdef _WIN32
     char buffer[MAX_PATH];

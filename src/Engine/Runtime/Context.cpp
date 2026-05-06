@@ -10,10 +10,10 @@
 namespace Engine
 {
 
-void Context::Init()
+void Context::init()
 {
     // initialize paths.
-    EnginePaths.Init();
+    paths.init();
 }
 
 } // namespace Engine
