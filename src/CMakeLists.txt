@@ -48,7 +48,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(Engine PRIVATE -Werror)
     endif()
 endif()
-
 target_link_libraries(Engine PRIVATE SDL3::SDL3)
 
 # create executable
