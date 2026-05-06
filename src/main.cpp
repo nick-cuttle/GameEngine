@@ -15,7 +15,7 @@ int main()
 {
     Engine::Context engine;
 
-    engine.init();
+    engine.initialize();
 
     std::cout << "Hello, World!" << std::endl;
     return EXIT_SUCCESS;

@@ -15,7 +15,7 @@
 namespace Engine
 {
 
-void Paths::init(Config const &config)
+void Paths::initialize(Config const &config)
 {
     if (!config.baseOverride.empty())
         m_Base = config.baseOverride;

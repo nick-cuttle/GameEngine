@@ -17,7 +17,7 @@ class Context
 {
   public:
     /// @brief Initializes the engine context, including paths.
-    void init();
+    void initialize();
 
     /// @brief Engine-wide filesystem paths initialized during context startup.
     Paths paths;

@@ -10,10 +10,9 @@
 namespace Engine
 {
 
-void Context::init()
+void Context::initialize()
 {
-    // initialize paths.
-    paths.init();
+    paths.initialize();
 }
 
 } // namespace Engine
