@@ -11,8 +11,9 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 
 add_executable(EngineUnitTests
-    unit/Core/LoggerTests.cpp
-    unit/Core/PathsTests.cpp
+    unit/Core/Test_ConsoleCapture.cpp
+    unit/Core/Test_Logger.cpp
+    unit/Core/Test_Paths.cpp
 )
 
 target_link_libraries(EngineUnitTests

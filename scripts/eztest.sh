@@ -2,13 +2,20 @@
 
 set -e
 
-BUILD_TYPE="Debug"
+BUILD_TYPE=""
 TEST_PATTERN=""
 LABEL=""
 LIST_TESTS=0
+COLOR_RESET="$(printf '\033[0m')"
+COLOR_BLUE="$(printf '\033[1;34m')"
+COLOR_GREEN="$(printf '\033[1;32m')"
+
+export CLICOLOR_FORCE=1
+export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
     echo "Usage: ./scripts/eztest.sh [Debug|Release] [options]"
+    echo "With no build type, runs Debug first, then Release."
     echo ""
     echo "Options:"
     echo "  --test <regex>    Run tests matching a CTest regex"
@@ -55,27 +62,43 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-BUILD_DIR="build/$BUILD_TYPE"
+run_tests() {
+    BUILD_TYPE="$1"
+    BUILD_DIR="build/$BUILD_TYPE"
 
-if [ ! -d "$BUILD_DIR" ]; then
-    echo "Error: build configuration '$BUILD_TYPE' does not exist at $BUILD_DIR"
-    echo "Run ./scripts/ezbuild.sh $BUILD_TYPE first"
-    exit 1
-fi
+    if [ ! -d "$BUILD_DIR" ]; then
+        echo "Error: build configuration '$BUILD_TYPE' does not exist at $BUILD_DIR"
+        echo "Run ./scripts/ezbuild.sh $BUILD_TYPE first"
+        exit 1
+    fi
 
-cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j$(nproc || echo 8)
+    printf "%s==> Building %s unit tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+    cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j$(nproc || echo 8)
 
-if [ "$LIST_TESTS" -eq 1 ]; then
-    ctest --test-dir "$BUILD_DIR" -N
-    exit 0
-fi
+    if [ "$LIST_TESTS" -eq 1 ]; then
+        printf "%s==> Listing %s tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+        ctest --test-dir "$BUILD_DIR" -N
+        return
+    fi
 
-if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
-    ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
-elif [ -n "$TEST_PATTERN" ]; then
-    ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN"
-elif [ -n "$LABEL" ]; then
-    ctest --test-dir "$BUILD_DIR" --output-on-failure -L "$LABEL"
+    printf "%s==> Running %s tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+
+    if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
+        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
+    elif [ -n "$TEST_PATTERN" ]; then
+        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN"
+    elif [ -n "$LABEL" ]; then
+        ctest --test-dir "$BUILD_DIR" --output-on-failure -L "$LABEL"
+    else
+        ctest --test-dir "$BUILD_DIR" --output-on-failure
+    fi
+
+    printf "%s==> %s tests passed%s\n" "$COLOR_GREEN" "$BUILD_TYPE" "$COLOR_RESET"
+}
+
+if [ -n "$BUILD_TYPE" ]; then
+    run_tests "$BUILD_TYPE"
 else
-    ctest --test-dir "$BUILD_DIR" --output-on-failure
+    run_tests Debug
+    run_tests Release
 fi

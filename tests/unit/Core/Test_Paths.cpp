@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-TEST_CASE("PathsTests", "[unit][core][paths]")
+TEST_CASE("Paths", "[unit][core][paths]")
 {
     Engine::Tests::TestTempDirectory tempDirectory("paths-base-override");
 

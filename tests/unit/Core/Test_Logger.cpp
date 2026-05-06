@@ -23,7 +23,7 @@ constexpr auto kEngineLoggerName = "Engine";
 
 } // namespace
 
-TEST_CASE("LoggerTests", "[unit][core][logger]")
+TEST_CASE("Logger", "[unit][core][logger]")
 {
     SpdlogCleanup cleanup;
     Engine::Tests::TestTempDirectory tempDirectory("logger");
