@@ -1,9 +1,9 @@
 #include <Engine/Core/Logger.hpp>
 #include <LogAssertions.hpp>
+#include <SpdlogTestGuard.hpp>
 #include <TestTempDirectory.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <spdlog/spdlog.h>
 
 #include <filesystem>
 #include <fstream>
@@ -11,16 +11,6 @@
 
 namespace
 {
-class SpdlogCleanup
-{
-  public:
-    ~SpdlogCleanup()
-    {
-        spdlog::drop_all();
-        spdlog::set_default_logger(nullptr);
-    }
-};
-
 // constants
 constexpr auto kEngineLoggerName = "Engine";
 
@@ -36,8 +26,8 @@ std::string readTextFile(std::filesystem::path const &path)
 
 TEST_CASE("Logger", "[unit][core][logger]")
 {
-    SpdlogCleanup cleanup;
-    Engine::Tests::TestTempDirectory tempDirectory("logger");
+    Engine::Tests::TestTempDirectory tempDirectory("Test_Logger");
+    Engine::Tests::SpdlogTestGuard spdlog;
 
     Engine::Logger logger;
     logger.initialize({.logDirectory = tempDirectory.path() / "logs"});
