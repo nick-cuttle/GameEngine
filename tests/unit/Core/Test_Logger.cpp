@@ -1,10 +1,13 @@
 #include <Engine/Core/Logger.hpp>
+#include <LogAssertions.hpp>
 #include <TestTempDirectory.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <spdlog/spdlog.h>
 
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 
 namespace
 {
@@ -20,6 +23,14 @@ class SpdlogCleanup
 
 // constants
 constexpr auto kEngineLoggerName = "Engine";
+
+std::string readTextFile(std::filesystem::path const &path)
+{
+    std::ifstream file(path);
+    std::ostringstream content;
+    content << file.rdbuf();
+    return content.str();
+}
 
 } // namespace
 
@@ -43,6 +54,17 @@ TEST_CASE("Logger", "[unit][core][logger]")
 
         REQUIRE(std::filesystem::is_directory(tempDirectory.path() / "logs"));
         REQUIRE(std::filesystem::exists(logFile));
+    }
+
+    SECTION("file log messages can be confirmed without date time information")
+    {
+        auto const logFile = tempDirectory.path() / "logs" / "Engine.log";
+
+        logger.root()->error("Test Error Message!");
+        logger.root()->flush();
+
+        Engine::Tests::confirmLogMessage(readTextFile(logFile), "error", kEngineLoggerName,
+                                         "Test Error Message!");
     }
 
     SECTION("subsystem loggers inherit the root logger level")

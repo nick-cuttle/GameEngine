@@ -5,3 +5,4 @@ BreakBeforeBraces: Allman
 QualifierAlignment: Right
 AlignTrailingComments: true
 KeepEmptyLinesAtTheStartOfBlocks: false
+AccessModifierOffset: -4

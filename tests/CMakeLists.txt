@@ -12,6 +12,7 @@ include(Catch)
 
 add_executable(EngineUnitTests
     unit/Core/Test_ConsoleCapture.cpp
+    unit/Core/Test_LogAssertions.cpp
     unit/Core/Test_Logger.cpp
     unit/Core/Test_Paths.cpp
 )

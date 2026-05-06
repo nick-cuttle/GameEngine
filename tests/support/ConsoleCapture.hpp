@@ -1,3 +1,8 @@
+/**
+ * @file  ConsoleCapture.hpp
+ * @brief Defines test helpers for capturing standard console streams.
+ */
+
 #pragma once
 
 #include <ios>
@@ -8,6 +13,7 @@
 
 namespace Engine::Tests
 {
+/// @brief Selects which standard console stream buffers should be captured.
 enum class ConsoleCaptureMode
 {
     Cout,
@@ -15,9 +21,14 @@ enum class ConsoleCaptureMode
     CoutAndCerr
 };
 
+/// @brief Redirects selected standard console streams into a string for a scoped test block.
+/// @details The original stream buffers are restored when capture finishes or the scope ends.
 class ConsoleCaptureScope
 {
   public:
+    /// @brief Starts capturing the selected console streams.
+    /// @param[out] output The string that receives captured output when capture finishes.
+    /// @param[in] mode The console streams to capture.
     ConsoleCaptureScope(std::string &output, ConsoleCaptureMode mode) :
         m_Output(output), m_Mode(mode), m_CoutBuffer(std::cout.rdbuf()), m_CerrBuffer(std::cerr.rdbuf())
     {
@@ -30,13 +41,17 @@ class ConsoleCaptureScope
             std::cerr.rdbuf(m_Stream.rdbuf());
     }
 
+    /// @brief Restores captured streams and writes the captured text to the output string.
     ~ConsoleCaptureScope() { finish(); }
 
     ConsoleCaptureScope(ConsoleCaptureScope const &) = delete;
     ConsoleCaptureScope &operator=(ConsoleCaptureScope const &) = delete;
 
+    /// @brief Checks whether the scope is still actively capturing streams.
+    /// @return True when capture is active; otherwise false.
     bool isCapturing() const { return m_Capturing; }
 
+    /// @brief Stops capture, restores original stream buffers, and stores captured text.
     void finish()
     {
         if (!m_Capturing)
@@ -53,11 +68,15 @@ class ConsoleCaptureScope
     }
 
   private:
+    /// @brief Checks whether stdout should be redirected.
+    /// @return True when the current capture mode includes std::cout; otherwise false.
     bool capturesCout() const
     {
         return m_Mode == ConsoleCaptureMode::Cout || m_Mode == ConsoleCaptureMode::CoutAndCerr;
     }
 
+    /// @brief Checks whether stderr should be redirected.
+    /// @return True when the current capture mode includes std::cerr; otherwise false.
     bool capturesCerr() const
     {
         return m_Mode == ConsoleCaptureMode::Cerr || m_Mode == ConsoleCaptureMode::CoutAndCerr;
