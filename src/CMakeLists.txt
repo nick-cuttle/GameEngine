@@ -2,8 +2,25 @@
 # Engine library
 # -------------------------
 
+# -------------------------
+# Dependencies
+# -------------------------
+
+include(FetchContent)
+
+# Fetch spdlog
+set(SPDLOG_FORCE_FETCH ON)
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.17.0
+)
+FetchContent_MakeAvailable(spdlog)
+
+
 set(ENGINE_SOURCES
     Engine/Core/Paths.cpp
+    Engine/Core/Logger.cpp
     Engine/Runtime/Context.cpp
 )
 
@@ -14,6 +31,9 @@ add_library(Engine STATIC ${ENGINE_SOURCES})
 target_include_directories(Engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# Link spdlog to Engine (IMPORTANT)
+target_link_libraries(Engine PUBLIC spdlog::spdlog)
 
 # Set compiler warnings for the Engine library.
 if(MSVC)
