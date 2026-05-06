@@ -50,8 +50,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 target_link_libraries(Engine PRIVATE SDL3::SDL3)
 
+find_package(SDL3 REQUIRED CONFIG)
+
 # create executable
 add_executable(GameEngine main.cpp)
 
 # link main executable to Engine library
-target_link_libraries(GameEngine PRIVATE Engine)
+target_link_libraries(GameEngine PRIVATE Engine SDL3::SDL3)
