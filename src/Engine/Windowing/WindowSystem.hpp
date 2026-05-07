@@ -6,6 +6,7 @@
 
 namespace Engine
 {
+
 struct WindowSize
 {
     int width;
@@ -47,4 +48,5 @@ class WindowSystem
     struct Implementation;
     std::unique_ptr<Implementation> implementation;
 };
+
 } // namespace Engine
