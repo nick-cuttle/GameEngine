@@ -20,14 +20,20 @@ int main()
     Engine::WindowSystem windowSystem;
     windowSystem.initialize();
 
-    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(
-        "Game Engine", Engine::WindowSize{.width = 1280, .height = 720});
+    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(Engine::WindowConfiguration{});
 
     bool isRunning = true;
 
     while (isRunning)
     {
-        for (Engine::WindowEvent const &windowEvent : windowSystem.pollWindowEvents())
+        Engine::WindowEventPollResult windowEventPollResult = windowSystem.pollWindowEvents();
+
+        if (windowEventPollResult.isApplicationQuitRequested)
+        {
+            isRunning = false;
+        }
+
+        for (Engine::WindowEvent const &windowEvent : windowEventPollResult.windowEvents)
         {
             bool shouldClosePrimaryWindow =
                 windowEvent.type == Engine::WindowEventType::CloseRequest &&

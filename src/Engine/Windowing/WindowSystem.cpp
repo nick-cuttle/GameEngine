@@ -1,8 +1,8 @@
 #include "WindowSystem.hpp"
 
 #include <SDL3/SDL.h>
+#include <cstdint>
 #include <stdexcept>
-#include <string>
 #include <unordered_map>
 
 namespace
@@ -41,7 +41,7 @@ namespace Engine
 struct WindowSystem::Implementation
 {
     bool isInitialized = false;
-    std::unordered_map<unsigned int, SDL_Window *> windowByIdentifier;
+    std::unordered_map<std::uint32_t, SDL_Window *> windowByIdentifier;
 };
 
 WindowSystem::WindowSystem() : implementation(std::make_unique<Implementation>())
@@ -86,21 +86,22 @@ void WindowSystem::shutdown()
     implementation->isInitialized = false;
 }
 
-WindowIdentifier WindowSystem::createPrimaryWindow(std::string_view title, WindowSize size)
+WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &configuration)
 {
     if (!implementation->isInitialized)
     {
         throw std::runtime_error("WindowSystem must be initialized before creating windows.");
     }
 
-    if (size.width <= 0 || size.height <= 0)
+    if (configuration.size.width <= 0 || configuration.size.height <= 0)
     {
         throw std::invalid_argument("Window size must be greater than zero.");
     }
 
-    std::string titleString{title};
+    SDL_WindowFlags windowFlags = configuration.isVisible ? 0 : SDL_WINDOW_HIDDEN;
 
-    SDL_Window *window = SDL_CreateWindow(titleString.c_str(), size.width, size.height, 0);
+    SDL_Window *window = SDL_CreateWindow(
+        configuration.title.c_str(), configuration.size.width, configuration.size.height, windowFlags);
 
     if (window == nullptr)
     {
@@ -116,17 +117,20 @@ WindowIdentifier WindowSystem::createPrimaryWindow(std::string_view title, Windo
         throw std::runtime_error(SDL_GetError());
     }
 
-    WindowIdentifier returnedWindowIdentifier{static_cast<unsigned int>(windowIdentifier)};
+    WindowIdentifier returnedWindowIdentifier{static_cast<std::uint32_t>(windowIdentifier)};
 
-    try
+    if (configuration.isVisible)
     {
-        presentInitialVisibilityBuffer(window);
-    }
-    catch (...)
-    {
-        SDL_DestroyWindow(window);
+        try
+        {
+            presentInitialVisibilityBuffer(window);
+        }
+        catch (...)
+        {
+            SDL_DestroyWindow(window);
 
-        throw;
+            throw;
+        }
     }
 
     implementation->windowByIdentifier.emplace(returnedWindowIdentifier.value, window);
@@ -134,40 +138,44 @@ WindowIdentifier WindowSystem::createPrimaryWindow(std::string_view title, Windo
     return returnedWindowIdentifier;
 }
 
-std::vector<WindowEvent> WindowSystem::pollWindowEvents()
+WindowEventPollResult WindowSystem::pollWindowEvents()
 {
-    std::vector<WindowEvent> windowEvents;
+    WindowEventPollResult pollResult;
 
     if (!implementation->isInitialized)
     {
-        return windowEvents;
+        return pollResult;
     }
 
     SDL_Event event;
 
     while (SDL_PollEvent(&event))
     {
+        if (event.type == SDL_EVENT_QUIT)
+        {
+            pollResult.isApplicationQuitRequested = true;
+            continue;
+        }
+
         if (event.type != SDL_EVENT_WINDOW_CLOSE_REQUESTED)
         {
             continue;
         }
 
-        unsigned int windowIdentifier = static_cast<unsigned int>(event.window.windowID);
+        std::uint32_t windowIdentifier = static_cast<std::uint32_t>(event.window.windowID);
 
         if (!implementation->windowByIdentifier.contains(windowIdentifier))
         {
             continue;
         }
 
-        windowEvents.push_back(WindowEvent{
+        pollResult.windowEvents.push_back(WindowEvent{
             .type = WindowEventType::CloseRequest,
             .windowIdentifier = WindowIdentifier{windowIdentifier},
         });
-
-        return windowEvents;
     }
 
-    return windowEvents;
+    return pollResult;
 }
 
 } // namespace Engine
