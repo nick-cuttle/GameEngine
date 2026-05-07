@@ -5,7 +5,6 @@ project(GameEngine LANGUAGES CXX)
 option(ENGINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(SDL_FORCE_FETCH "Fetch SDL from source" ON)
 option(BUILD_TESTS "Build engine tests" ON)
-option(SDL_FORCE_FETCH "Fetch SDL from source" ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
