@@ -15,6 +15,7 @@ add_executable(EngineUnitTests
     unit/Core/Test_LogAssertions.cpp
     unit/Core/Test_Logger.cpp
     unit/Core/Test_Paths.cpp
+    unit/Input/Test_InputSystem.cpp
     unit/Runtime/Test_Context.cpp
     unit/Windowing/Test_WindowSystem.cpp
 )
