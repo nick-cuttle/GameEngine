@@ -1,3 +1,8 @@
+/**
+ * @file  WindowSystem.cpp
+ * @brief Implements SDL-backed engine window lifecycle and event polling.
+ */
+
 #include "WindowSystem.hpp"
 
 #include <SDL3/SDL.h>
@@ -11,6 +16,7 @@ namespace
 
 /// @brief Commits an initial window surface so desktop compositors can map the window.
 /// @param window Platform window that receives the initial visibility buffer.
+/// @throws std::runtime_error if SDL cannot acquire, fill, or present the window surface.
 void presentInitialVisibilityBuffer(SDL_Window *window)
 {
     SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
@@ -20,6 +26,7 @@ void presentInitialVisibilityBuffer(SDL_Window *window)
         throw std::runtime_error(SDL_GetError());
     }
 
+    // The initial color is temporary. The renderer will replace it once the frame loop starts.
     Uint32 backgroundColor = SDL_MapSurfaceRGBA(windowSurface, 255, 0, 0, 255);
 
     if (!SDL_FillSurfaceRect(windowSurface, nullptr, backgroundColor))
@@ -41,7 +48,9 @@ namespace Engine
 
 struct WindowSystem::Implementation
 {
+    /// @brief Whether this instance currently owns an initialized SDL video subsystem.
     bool isInitialized = false;
+    /// @brief Managed SDL windows keyed by the engine-visible SDL window identifier.
     std::unordered_map<std::uint32_t, SDL_Window *> windowByIdentifier;
 };
 
@@ -58,6 +67,7 @@ void WindowSystem::initialize()
 {
     if (implementation->isInitialized)
     {
+        // SDL video initialization is treated as an instance-level idempotent operation.
         return;
     }
 
@@ -73,6 +83,7 @@ void WindowSystem::shutdown()
 {
     if (!implementation->isInitialized)
     {
+        // Shutdown may be reached from explicit user code and from the destructor.
         return;
     }
 
@@ -101,8 +112,8 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 
     SDL_WindowFlags windowFlags = configuration.isVisible ? 0 : SDL_WINDOW_HIDDEN;
 
-    SDL_Window *window = SDL_CreateWindow(
-        configuration.title.c_str(), configuration.size.width, configuration.size.height, windowFlags);
+    SDL_Window *window = SDL_CreateWindow(configuration.title.c_str(), configuration.size.width,
+                                          configuration.size.height, windowFlags);
 
     if (window == nullptr)
     {
@@ -124,6 +135,7 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
     {
         try
         {
+            // Some platforms require a first committed buffer before a newly visible window maps.
             presentInitialVisibilityBuffer(window);
         }
         catch (...)
@@ -167,6 +179,7 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
 
         if (!implementation->windowByIdentifier.contains(windowIdentifier))
         {
+            // SDL can report close events for windows not owned by this Window System instance.
             continue;
         }
 
