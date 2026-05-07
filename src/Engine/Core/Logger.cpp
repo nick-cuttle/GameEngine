@@ -68,7 +68,10 @@ void Logger::initialize(Config const &config)
     m_RootLogger->info("Log file: {}", logFile.string());
 }
 
-std::shared_ptr<spdlog::logger> Logger::root() const { return m_RootLogger; }
+std::shared_ptr<spdlog::logger> Logger::root() const
+{
+    return m_RootLogger;
+}
 
 std::shared_ptr<spdlog::logger> Logger::createSubsystem(std::string const &name) const
 {

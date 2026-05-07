@@ -14,7 +14,7 @@ namespace Engine
 {
 class Logger
 {
-  public:
+public:
     struct Config
     {
         std::filesystem::path logDirectory; // Directory where log files will be stored
@@ -35,7 +35,7 @@ class Logger
     /// @return The created subsystem logger instance.
     std::shared_ptr<spdlog::logger> createSubsystem(std::string const &name) const;
 
-  private:
+private:
     std::shared_ptr<spdlog::logger> m_RootLogger;
 };
 } // namespace Engine

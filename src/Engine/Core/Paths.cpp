@@ -28,9 +28,18 @@ void Paths::initialize(Config const &config)
     std::filesystem::create_directories(m_Logs);
 }
 
-std::filesystem::path const &Paths::base() const { return m_Base; }
-std::filesystem::path const &Paths::logs() const { return m_Logs; }
-std::filesystem::path const &Paths::assets() const { return m_Assets; }
+std::filesystem::path const &Paths::base() const
+{
+    return m_Base;
+}
+std::filesystem::path const &Paths::logs() const
+{
+    return m_Logs;
+}
+std::filesystem::path const &Paths::assets() const
+{
+    return m_Assets;
+}
 
 std::filesystem::path Paths::getExecutableDirectory() const
 {
