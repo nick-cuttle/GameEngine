@@ -6,23 +6,41 @@
  */
 
 #include <Engine/Runtime/Context.hpp>
+#include <Engine/Windowing/WindowSystem.hpp>
+
 #include <cstdlib>
 
 /// @brief  Main entry point for the application.
 /// @return EXIT_SUCCESS on successful execution, otherwise EXIT_FAILURE.
 int main()
 {
-    // // create engine and set global context pointer
     Engine::Context engine;
-
     engine.initialize();
 
-    engine.logger.root()->warn("Test Warning Message!");
-    engine.logger.root()->info("Test Info Message!");
-    engine.logger.root()->debug("Test Debug Message!");
-    engine.logger.root()->critical("Test Critical Message!");
-    engine.logger.root()->error("Test Error Message!");
-    engine.logger.root()->trace("Test Trace Message!");
+    Engine::WindowSystem windowSystem;
+    windowSystem.initialize();
+
+    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(
+        "Game Engine", Engine::WindowSize{.width = 1280, .height = 720});
+
+    bool isRunning = true;
+
+    while (isRunning)
+    {
+        for (Engine::WindowEvent const &windowEvent : windowSystem.pollWindowEvents())
+        {
+            bool shouldClosePrimaryWindow =
+                windowEvent.type == Engine::WindowEventType::CloseRequest &&
+                windowEvent.windowIdentifier.value == primaryWindow.value;
+
+            if (shouldClosePrimaryWindow)
+            {
+                isRunning = false;
+            }
+        }
+    }
+
+    windowSystem.shutdown();
 
     return EXIT_SUCCESS;
 }

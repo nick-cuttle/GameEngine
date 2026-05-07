@@ -1,8 +1,39 @@
 #include "WindowSystem.hpp"
+
 #include <SDL3/SDL.h>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+
+namespace
+{
+
+/// @brief Commits an initial window surface so desktop compositors can map the window.
+/// @param window Platform window that receives the initial visibility buffer.
+void presentInitialVisibilityBuffer(SDL_Window *window)
+{
+    SDL_Surface *windowSurface = SDL_GetWindowSurface(window);
+
+    if (windowSurface == nullptr)
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    Uint32 backgroundColor = SDL_MapSurfaceRGBA(windowSurface, 255, 0, 0, 255);
+
+    if (!SDL_FillSurfaceRect(windowSurface, nullptr, backgroundColor))
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    // Wayland does not map a new window until the application commits a first buffer.
+    if (!SDL_UpdateWindowSurface(window))
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+}
+
+} // namespace
 
 namespace Engine
 {
@@ -86,6 +117,17 @@ WindowIdentifier WindowSystem::createPrimaryWindow(std::string_view title, Windo
     }
 
     WindowIdentifier returnedWindowIdentifier{static_cast<unsigned int>(windowIdentifier)};
+
+    try
+    {
+        presentInitialVisibilityBuffer(window);
+    }
+    catch (...)
+    {
+        SDL_DestroyWindow(window);
+
+        throw;
+    }
 
     implementation->windowByIdentifier.emplace(returnedWindowIdentifier.value, window);
 
