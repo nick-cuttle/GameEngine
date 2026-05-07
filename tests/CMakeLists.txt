@@ -15,6 +15,7 @@ add_executable(EngineUnitTests
     unit/Core/Test_LogAssertions.cpp
     unit/Core/Test_Logger.cpp
     unit/Core/Test_Paths.cpp
+    unit/Runtime/Test_Context.cpp
 )
 
 target_link_libraries(EngineUnitTests
