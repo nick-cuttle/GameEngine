@@ -60,6 +60,22 @@ _Avoid_: Window system input
 The per-frame coordinator that polls systems, advances frame work, and applies shutdown policy.
 _Avoid_: Window loop, renderer loop
 
+**Unit Test**:
+A focused test that verifies one engine type or function with controlled inputs and no required engine runtime.
+_Avoid_: Small test, low-level test
+
+**Integration Test**:
+A test that verifies multiple engine systems working together through public engine APIs.
+_Avoid_: System test, runtime test
+
+**Test Harness**:
+Shared test support that creates isolated resources, configures systems, or runs bounded engine scenarios.
+_Avoid_: Fixture, test utility
+
+**Smoke Test**:
+A coarse test that verifies a built executable or high-level scenario starts and exits successfully.
+_Avoid_: Sanity test, launch test
+
 ## Relationships
 
 - A **Window System** creates and manages one or more application windows.
@@ -81,14 +97,25 @@ _Avoid_: Window loop, renderer loop
 - A **Renderer** owns presentation operations for its **Graphics Surface**.
 - A **Window System** must not own backend rendering commands.
 - A **Renderer** must release a **Graphics Surface** before the **Window System** destroys the associated window.
+- A **Unit Test** should not require the **Runtime Loop**.
+- An **Integration Test** may use real filesystem resources only through a **Test Harness** that creates a unique isolated temporary directory for each test.
+- A **Smoke Test** verifies startup behavior without replacing focused **Unit Tests** or **Integration Tests**.
+- Each test file should expose one overall Catch2 test case named after the file, such as `PathsTests`, with detailed scenarios expressed as subcases.
+- Each overall Catch2 test case is registered as an individual CTest test.
+- Test targets are controlled by the CMake `BUILD_TESTS` option.
 
 ## Example Dialogue
 
 > **Dev:** "Should the window code call OpenGL directly?"
 > **Domain expert:** "No. The **Window System** exposes the attachment point; the **Renderer** owns OpenGL or Vulkan work."
 
+> **Dev:** "Can an integration test write logs to disk?"
+> **Domain expert:** "Yes, but only through a **Test Harness** that owns a unique isolated temporary directory for that test."
+
 ## Flagged Ambiguities
 
 - "windowing system" was used near rendering concerns; resolved: **Window System** and **Renderer** are separate subsystems.
 - The **Window System** may prepare a window for a **Graphics Surface Capability**, but backend attachment work belongs behind the renderer-facing bridge.
 - "one window" was discussed as an initial runtime need; resolved: the model supports multiple windows with a **Primary Window** convenience path.
+- "testing infrastructure" was broad; resolved: start with **Unit Tests** for the Engine library and extend through **Integration Tests** using a **Test Harness**.
+- CTest should discover overall Catch2 test cases by test-file identity instead of exposing each scenario as a separate top-level test.

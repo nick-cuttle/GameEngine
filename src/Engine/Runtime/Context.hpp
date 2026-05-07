@@ -16,7 +16,7 @@ namespace Engine
 /// @brief Manages configurations and context for the engine
 class Context
 {
-  public:
+public:
     /// @brief Initializes the engine context, including paths.
     void initialize();
 

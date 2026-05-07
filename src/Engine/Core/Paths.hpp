@@ -11,7 +11,7 @@ namespace Engine
 {
 class Paths
 {
-  public:
+public:
     /// @brief Configuration structure for initializing paths.
     struct Config
     {
@@ -40,12 +40,12 @@ class Paths
     /// @return   The path to the Assets directory.
     std::filesystem::path const &assets() const;
 
-  private:
+private:
     /// @brief Retrieves the directory of the currently running executable.
     /// @return Directory path of the executable.
     std::filesystem::path getExecutableDirectory() const;
 
-  private:
+private:
     std::filesystem::path m_Base;
     std::filesystem::path m_Logs;
     std::filesystem::path m_Assets;
