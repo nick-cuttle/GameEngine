@@ -14,8 +14,14 @@ namespace Engine::Tests
 class SpdlogTestGuard
 {
 public:
-    SpdlogTestGuard() { reset(); }
-    ~SpdlogTestGuard() { reset(); }
+    SpdlogTestGuard()
+    {
+        reset();
+    }
+    ~SpdlogTestGuard()
+    {
+        reset();
+    }
 
     SpdlogTestGuard(SpdlogTestGuard const &) = delete;
     SpdlogTestGuard &operator=(SpdlogTestGuard const &) = delete;

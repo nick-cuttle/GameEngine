@@ -43,7 +43,10 @@ public:
 
     /// @brief Gets the owned temporary directory path.
     /// @return The absolute path to the temporary directory.
-    std::filesystem::path const &path() const { return m_Path; }
+    std::filesystem::path const &path() const
+    {
+        return m_Path;
+    }
 
 private:
     /// @brief Builds a unique path for a temporary test directory.
