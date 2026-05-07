@@ -6,3 +6,6 @@ QualifierAlignment: Right
 AlignTrailingComments: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false

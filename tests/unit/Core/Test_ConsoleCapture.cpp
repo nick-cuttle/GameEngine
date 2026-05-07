@@ -1,3 +1,8 @@
+/**
+ * @file  Test_ConsoleCapture.cpp
+ * @brief Tests the ConsoleCaptureScope test helper for capturing standard console streams.
+ */
+
 #include <ConsoleCapture.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -51,9 +56,15 @@ TEST_CASE("ConsoleCapture", "[unit][core][console]")
         std::string firstOutput;
         std::string secondOutput;
 
-        CAPTURE_CONSOLE(firstOutput) { std::cout << "first"; }
+        CAPTURE_CONSOLE(firstOutput)
+        {
+            std::cout << "first";
+        }
 
-        CAPTURE_CONSOLE(secondOutput) { std::cout << "second"; }
+        CAPTURE_CONSOLE(secondOutput)
+        {
+            std::cout << "second";
+        }
 
         REQUIRE(firstOutput == "first");
         REQUIRE(secondOutput == "second");

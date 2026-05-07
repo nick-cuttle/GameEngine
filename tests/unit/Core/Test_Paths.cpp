@@ -1,3 +1,8 @@
+/**
+ * @file  Test_Paths.cpp
+ * @brief Tests the Paths class for managing engine paths.
+ */
+
 #include <Engine/Core/Paths.hpp>
 #include <TestTempDirectory.hpp>
 
@@ -10,19 +15,14 @@ TEST_CASE("Paths", "[unit][core][paths]")
     Engine::Paths paths;
     paths.initialize({.baseOverride = tempDirectory.path()});
 
-    SECTION("base path uses the configured override")
+    SECTION("initialize")
     {
+        // confirm paths are correct.
         REQUIRE(paths.base() == tempDirectory.path());
-    }
-
-    SECTION("engine directories are derived from the base path")
-    {
         REQUIRE(paths.logs() == tempDirectory.path() / "logs");
         REQUIRE(paths.assets() == tempDirectory.path() / "assets");
-    }
 
-    SECTION("logs directory is created during initialization")
-    {
+        // confirm log directory is created during initialization.
         REQUIRE(std::filesystem::is_directory(paths.logs()));
     }
 }

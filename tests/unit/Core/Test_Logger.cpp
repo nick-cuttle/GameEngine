@@ -1,3 +1,8 @@
+/**
+ * @file  Test_Logger.cpp
+ * @brief Tests the Logger class, which manages logging functionality for the engine.
+ */
+
 #include <Engine/Core/Logger.hpp>
 #include <LogAssertions.hpp>
 #include <SpdlogTestGuard.hpp>
@@ -30,20 +35,28 @@ TEST_CASE("Logger", "[unit][core][logger]")
     Engine::Tests::SpdlogTestGuard spdlog;
 
     Engine::Logger logger;
-    logger.initialize({.logDirectory = tempDirectory.path() / "logs"});
 
-    SECTION("root logger is initialized")
+    std::filesystem::path const logDir = tempDirectory.path() / "logs";
+    std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
+
+    logger.initialize({.logDirectory = logDir});
+    logger.root()->flush();
+
+    SECTION("initialize")
     {
         REQUIRE(logger.root() != nullptr);
         REQUIRE(logger.root()->name() == kEngineLoggerName);
-    }
 
-    SECTION("log directory and file are created")
-    {
-        auto const logFile = tempDirectory.path() / "logs" / "Engine.log";
+        REQUIRE(std::filesystem::is_directory(logDir));
+        REQUIRE(std::filesystem::exists(kLogFile));
 
-        REQUIRE(std::filesystem::is_directory(tempDirectory.path() / "logs"));
-        REQUIRE(std::filesystem::exists(logFile));
+        std::string const logOutput = readTextFile(kLogFile);
+
+        // confirm expected initialization log messages are present in console output
+        Engine::Tests::confirmInfoLogMessage(logOutput, kEngineLoggerName,
+                                             "Engine logger initialized");
+        Engine::Tests::confirmInfoLogMessage(logOutput, kEngineLoggerName,
+                                             "Log file: " + kLogFile.string());
     }
 
     SECTION("file log messages can be confirmed without date time information")
@@ -57,7 +70,7 @@ TEST_CASE("Logger", "[unit][core][logger]")
                                          "Test Error Message!");
     }
 
-    SECTION("subsystem loggers inherit the root logger level")
+    SECTION("createSubsystem")
     {
         auto subsystem = logger.createSubsystem("LoggerTests.Subsystem");
 
@@ -68,9 +81,9 @@ TEST_CASE("Logger", "[unit][core][logger]")
 
     SECTION("duplicate subsystem logger names are rejected")
     {
-        constexpr auto kSubsystemName = "LoggerTests.DuplicateSubsystem";
-        logger.createSubsystem(kSubsystemName);
+        constexpr auto kDuplicateName = "LoggerTests.DuplicateSubsystem";
+        logger.createSubsystem(kDuplicateName);
 
-        REQUIRE_THROWS(logger.createSubsystem(kSubsystemName));
+        REQUIRE_THROWS(logger.createSubsystem(kDuplicateName));
     }
 }

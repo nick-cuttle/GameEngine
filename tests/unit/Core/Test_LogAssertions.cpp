@@ -1,3 +1,8 @@
+/**
+ * @file  Test_LogAssertions.cpp
+ * @brief Tests the LogAssertions test helper for validating log messages.
+ */
+
 #include <LogAssertions.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -20,22 +25,20 @@ TEST_CASE("LogAssertions", "[unit][core][logger]")
 
     SECTION("finds expected messages inside multiple log lines")
     {
-        auto const output =
-            "[18:05:07] [info] [Engine] ignored\n"
-            "[18:05:08] [warning] [Renderer] Device recreated\n";
+        auto const output = "[18:05:07] [info] [Engine] ignored\n"
+                            "[18:05:08] [warning] [Renderer] Device recreated\n";
 
         Engine::Tests::confirmLogMessage(output, "warning", "Renderer", "Device recreated");
     }
 
     SECTION("matches each known log type with convenience helpers")
     {
-        auto const output =
-            "[18:05:07] [trace] [Engine] trace message\n"
-            "[18:05:08] [debug] [Engine] debug message\n"
-            "[18:05:09] [info] [Engine] info message\n"
-            "[18:05:10] [warning] [Engine] warning message\n"
-            "[18:05:11] [error] [Engine] error message\n"
-            "[18:05:12] [critical] [Engine] critical message\n";
+        auto const output = "[18:05:07] [trace] [Engine] trace message\n"
+                            "[18:05:08] [debug] [Engine] debug message\n"
+                            "[18:05:09] [info] [Engine] info message\n"
+                            "[18:05:10] [warning] [Engine] warning message\n"
+                            "[18:05:11] [error] [Engine] error message\n"
+                            "[18:05:12] [critical] [Engine] critical message\n";
 
         Engine::Tests::confirmTraceLogMessage(output, Engine::Tests::kEngineLoggerName,
                                               "trace message");
