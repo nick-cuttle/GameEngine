@@ -7,7 +7,6 @@ option(SDL_FORCE_FETCH "Fetch SDL from source" ON)
 option(ENGINE_ENABLE_SDL_GPU "Enable SDL GPU support when building fetched SDL" OFF)
 option(ENGINE_ENABLE_SDL_VULKAN "Enable SDL Vulkan support when building fetched SDL" OFF)
 option(BUILD_TESTS "Build engine tests" ON)
-option(SDL_FORCE_FETCH "Fetch SDL from source" ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
