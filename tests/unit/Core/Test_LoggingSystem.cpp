@@ -43,6 +43,18 @@ TEST_CASE("LoggingSystem", "[unit][core][logging-system]")
     std::filesystem::path const logDir = tempDirectory.path() / "logs";
     std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
 
+    SECTION("shutdown before initialize does not tear down another logging system")
+    {
+        Engine::LoggingSystem owner;
+        owner.initialize({.logDirectory = logDir});
+
+        Engine::LoggingSystem uninitialized;
+        REQUIRE_NOTHROW(uninitialized.shutdown());
+
+        owner.root().info("Still alive");
+        owner.shutdown();
+    }
+
     SECTION("root before initialize is rejected")
     {
         REQUIRE_THROWS(loggingSystem.root());

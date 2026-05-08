@@ -60,21 +60,17 @@ WindowSystem::WindowSystem() : implementation(std::make_unique<Implementation>()
 
 WindowSystem::~WindowSystem()
 {
-    if (implementation->isInitialized)
-    {
-        shutdown();
-    }
+    releaseResources();
 }
 
 void WindowSystem::initialize(Logger logger)
 {
-    m_Logger = logger;
-
     if (implementation->isInitialized)
     {
         m_Logger.trace("Implementation has already been initialized.");
         return;
     }
+    m_Logger = logger;
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -93,15 +89,7 @@ void WindowSystem::shutdown()
         return;
     }
 
-    for (auto const &[windowIdentifier, window] : implementation->windowByIdentifier)
-    {
-        SDL_DestroyWindow(window);
-    }
-
-    implementation->windowByIdentifier.clear();
-
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    implementation->isInitialized = false;
+    releaseResources();
 
     m_Logger.info("Window has been closed.");
 }
@@ -196,6 +184,24 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
     }
 
     return pollResult;
+}
+
+void WindowSystem::releaseResources() noexcept
+{
+    if (!implementation->isInitialized)
+    {
+        return;
+    }
+
+    for (auto const &[windowIdentifier, window] : implementation->windowByIdentifier)
+    {
+        SDL_DestroyWindow(window);
+    }
+
+    implementation->windowByIdentifier.clear();
+
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    implementation->isInitialized = false;
 }
 
 } // namespace Engine

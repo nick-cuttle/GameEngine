@@ -243,13 +243,17 @@ void LoggingSystem::flush() const
 
 void LoggingSystem::shutdown()
 {
-    flush();
-    if (backendState)
+    if (!backendState)
     {
-        backendState->isAlive = false;
-        backendState->issuedLoggers.clear();
-        backendState->rootLogger.reset();
+        return;
     }
+
+    flush();
+
+    backendState->isAlive = false;
+    backendState->issuedLoggers.clear();
+    backendState->rootLogger.reset();
+
     backendState.reset();
     spdlog::set_default_logger(nullptr);
     spdlog::drop_all();
