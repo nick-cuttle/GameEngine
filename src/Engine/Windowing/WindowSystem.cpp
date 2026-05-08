@@ -6,11 +6,13 @@
 #include "WindowSystem.hpp"
 
 #include <SDL3/SDL.h>
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace
 {
@@ -18,6 +20,21 @@ namespace
 /// @brief Largest window dimension accepted before converting to the platform backend type.
 constexpr std::uint32_t maximumPlatformWindowDimension =
     static_cast<std::uint32_t>(std::numeric_limits<int>::max());
+
+/// @brief Maximum bytes reserved for SDL event descriptions used in trace logging.
+constexpr int platformEventDescriptionBufferSize = 256;
+
+/// @brief Formats an SDL event description for trace logging.
+/// @param platformEvent SDL event to describe.
+/// @return English description produced by SDL.
+std::string describePlatformEvent(SDL_Event const &platformEvent)
+{
+    std::array<char, platformEventDescriptionBufferSize> eventDescriptionBuffer{};
+    (void)SDL_GetEventDescription(&platformEvent, eventDescriptionBuffer.data(),
+                                  static_cast<int>(eventDescriptionBuffer.size()));
+
+    return eventDescriptionBuffer.data();
+}
 
 /// @brief Commits an initial window surface so desktop compositors can map the window.
 /// @param window Platform window that receives the initial visibility buffer.
@@ -216,6 +233,7 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 WindowEventPollResult WindowSystem::pollWindowEvents()
 {
     WindowEventPollResult pollResult;
+    static std::unordered_set<std::uint32_t> previouslyLoggedNonWindowEventTypes;
 
     if (!implementation->isInitialized)
     {
@@ -229,11 +247,23 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
         if (event.type == SDL_EVENT_QUIT)
         {
             pollResult.isApplicationQuitRequested = true;
+
+            m_Logger.trace("Application quit event has been requested.");
             continue;
         }
 
         if (event.type < SDL_EVENT_WINDOW_FIRST || event.type > SDL_EVENT_WINDOW_LAST)
         {
+            std::uint32_t const eventType = static_cast<std::uint32_t>(event.type);
+
+            if (previouslyLoggedNonWindowEventTypes.insert(eventType).second)
+            {
+                std::string const eventDescription = describePlatformEvent(event);
+
+                m_Logger.trace("Non-window event captured: {} ({})", eventDescription,
+                               eventType);
+            }
+
             continue;
         }
 
@@ -242,6 +272,8 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
 
         if (windowIterator == implementation->windowByIdentifier.end())
         {
+            m_Logger.trace("Ignoring window event for unmanaged window identifier {}.",
+                           event.window.windowID);
             continue;
         }
 
