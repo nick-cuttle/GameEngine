@@ -56,6 +56,14 @@ _Avoid_: Quit, destroy
 A subsystem that owns keyboard, mouse, controller, and other player input state and events.
 _Avoid_: Window system input
 
+**Logging System**:
+A core subsystem that owns engine logging policy, concrete logging backend setup, and scoped **Logger** creation for engine subsystems.
+_Avoid_: spdlog registry, logger factory
+
+**Logger**:
+A lightweight engine-owned handle used by subsystems to write log messages without depending on concrete logging backend types.
+_Avoid_: spdlog logger, shared logger pointer
+
 **Runtime Loop**:
 The per-frame coordinator that polls systems, advances frame work, and applies shutdown policy.
 _Avoid_: Window loop, renderer loop
@@ -97,6 +105,10 @@ _Avoid_: Sanity test, launch test
 - A **Renderer** owns presentation operations for its **Graphics Surface**.
 - A **Window System** must not own backend rendering commands.
 - A **Renderer** must release a **Graphics Surface** before the **Window System** destroys the associated window.
+- The **Logging System** owns logging backend configuration, sink setup, level policy, flush policy, and subsystem logger naming.
+- Subsystems receive **Loggers** during composition instead of creating concrete logging backend instances.
+- Subsystem **Logger** names should use the subsystem's domain concept name in PascalCase without spaces, such as `WindowSystem` or `InputSystem`.
+- Concrete logging backend types should not appear in public subsystem interfaces.
 - A **Unit Test** should not require the **Runtime Loop**.
 - An **Integration Test** may use real filesystem resources only through a **Test Harness** that creates a unique isolated temporary directory for each test.
 - A **Smoke Test** verifies startup behavior without replacing focused **Unit Tests** or **Integration Tests**.
