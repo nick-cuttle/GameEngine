@@ -2,3 +2,4 @@ build/
 coverage/
 tests/tmp/
 .vscode/
+tmp/

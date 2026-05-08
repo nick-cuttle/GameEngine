@@ -16,11 +16,13 @@ add_executable(EngineUnitTests
     unit/Core/Test_Logger.cpp
     unit/Core/Test_Paths.cpp
     unit/Runtime/Test_Context.cpp
+    unit/Windowing/Test_WindowSystem.cpp
 )
 
 target_link_libraries(EngineUnitTests
     PRIVATE
         Engine
+        SDL3::SDL3
         Catch2::Catch2WithMain
 )
 
