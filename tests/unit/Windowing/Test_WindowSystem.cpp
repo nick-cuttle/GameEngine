@@ -12,6 +12,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <variant>
@@ -159,6 +161,26 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
     {
         STATIC_REQUIRE((std::is_same_v<decltype(Engine::WindowSize{}.width), std::uint32_t>));
         STATIC_REQUIRE((std::is_same_v<decltype(Engine::WindowSize{}.height), std::uint32_t>));
+    }
+
+    SECTION("primary window creation rejects dimensions outside the platform range")
+    {
+        constexpr std::uint32_t unsupportedPlatformWindowDimension =
+            static_cast<std::uint32_t>(std::numeric_limits<int>::max()) + 1U;
+
+        Engine::WindowConfiguration widthConfiguration;
+        widthConfiguration.isVisible = false;
+        widthConfiguration.size.width = unsupportedPlatformWindowDimension;
+
+        REQUIRE_THROWS_AS(windowSystem.createPrimaryWindow(widthConfiguration),
+                          std::invalid_argument);
+
+        Engine::WindowConfiguration heightConfiguration;
+        heightConfiguration.isVisible = false;
+        heightConfiguration.size.height = unsupportedPlatformWindowDimension;
+
+        REQUIRE_THROWS_AS(windowSystem.createPrimaryWindow(heightConfiguration),
+                          std::invalid_argument);
     }
 
     SECTION("graphics surface size is distinct from window size")

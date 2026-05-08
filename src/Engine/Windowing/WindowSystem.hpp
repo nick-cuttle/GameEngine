@@ -18,7 +18,8 @@ namespace Engine
 
 /// @brief Logical dimensions of an engine-owned window.
 /// @details Values are desktop-coordinate dimensions used when asking the platform backend to
-///          create a window. Window creation rejects non-positive dimensions.
+///          create a window. Window creation rejects zero dimensions and dimensions that exceed
+///          the backend's supported signed range.
 struct WindowSize
 {
     /// @brief Logical width in desktop units.
@@ -48,8 +49,8 @@ struct WindowIdentifier
     /// @param left First window identifier to compare.
     /// @param right Second window identifier to compare.
     /// @return True when both identifiers refer to the same engine-owned window.
-    [[nodiscard]] friend constexpr bool operator==(WindowIdentifier const &left,
-                                                  WindowIdentifier const &right) noexcept = default;
+    [[nodiscard]] friend constexpr bool
+    operator==(WindowIdentifier const &left, WindowIdentifier const &right) noexcept = default;
 };
 
 /// @brief Engine-owned configuration used to create a window.
@@ -200,7 +201,8 @@ public:
     /// @return Stable identifier for the created Primary Window.
     /// @throws std::runtime_error if the Window System is not initialized or the platform backend
     ///         cannot create, identify, or present the window.
-    /// @throws std::invalid_argument if the configured width or height is not greater than zero.
+    /// @throws std::invalid_argument if the configured width or height is zero or exceeds the
+    ///         platform backend's supported signed range.
     WindowIdentifier createPrimaryWindow(WindowConfiguration const &configuration);
 
     /// @brief Drains pending platform events and returns engine-owned window results.

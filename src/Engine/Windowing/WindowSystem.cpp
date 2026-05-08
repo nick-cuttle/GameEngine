@@ -7,12 +7,17 @@
 
 #include <SDL3/SDL.h>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 namespace
 {
+
+/// @brief Largest window dimension accepted before converting to the platform backend type.
+constexpr std::uint32_t maximumPlatformWindowDimension =
+    static_cast<std::uint32_t>(std::numeric_limits<int>::max());
 
 /// @brief Commits an initial window surface so desktop compositors can map the window.
 /// @param window Platform window that receives the initial visibility buffer.
@@ -153,15 +158,24 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
         throw std::runtime_error("WindowSystem must be initialized before creating windows.");
     }
 
-    if (configuration.size.width <= 0 || configuration.size.height <= 0)
+    if (configuration.size.width == 0 || configuration.size.height == 0)
     {
         throw std::invalid_argument("Window size must be greater than zero.");
     }
 
+    if (configuration.size.width > maximumPlatformWindowDimension ||
+        configuration.size.height > maximumPlatformWindowDimension)
+    {
+        throw std::invalid_argument("Window size exceeds the platform window dimension limit.");
+    }
+
+    int const platformWindowWidth = static_cast<int>(configuration.size.width);
+    int const platformWindowHeight = static_cast<int>(configuration.size.height);
+
     SDL_WindowFlags windowFlags = configuration.isVisible ? 0 : SDL_WINDOW_HIDDEN;
 
-    SDL_Window *window = SDL_CreateWindow(configuration.title.c_str(), configuration.size.width,
-                                          configuration.size.height, windowFlags);
+    SDL_Window *window = SDL_CreateWindow(configuration.title.c_str(), platformWindowWidth,
+                                          platformWindowHeight, windowFlags);
 
     if (window == nullptr)
     {
