@@ -131,6 +131,11 @@ private:
     /// @brief Owning pointer to the platform-specific implementation state.
     std::unique_ptr<Implementation> implementation;
     Logger m_Logger;
+
+    /// @brief Releases resources owned by the platform-specific implementation.
+    /// @details Needed to separate Logger usage from platform-specific teardown in shutdown() and
+    /// the destructor.
+    void releaseResources() noexcept;
 };
 
 } // namespace Engine
