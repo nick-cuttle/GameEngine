@@ -46,6 +46,7 @@ FetchContent_MakeAvailable(spdlog)
 set(ENGINE_SOURCES
     Engine/Core/Paths.cpp
     Engine/Core/Logger.cpp
+    Engine/Input/InputSystem.cpp
     Engine/Runtime/Context.cpp
     Engine/Windowing/WindowSystem.cpp
 )
