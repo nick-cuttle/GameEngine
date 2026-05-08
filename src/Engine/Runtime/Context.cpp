@@ -14,10 +14,9 @@ void Context::initialize()
 {
     paths.initialize();
 
-    // initialize logger
-    Logger::Config loggerConfig;
-    loggerConfig.logDirectory = paths.logs();
-    logger.initialize(loggerConfig);
+    LoggingConfiguration loggingConfiguration;
+    loggingConfiguration.logDirectory = paths.logs();
+    loggingSystem.initialize(loggingConfiguration);
 }
 
 } // namespace Engine

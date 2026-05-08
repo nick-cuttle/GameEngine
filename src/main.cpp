@@ -18,7 +18,7 @@ int main()
     engine.initialize();
 
     Engine::WindowSystem windowSystem;
-    auto windowLogger = engine.logger.createSubsystem("WindowSystem");
+    auto windowLogger = engine.loggingSystem.createSubsystemLogger("WindowSystem");
     windowSystem.initialize(windowLogger);
 
     Engine::WindowIdentifier primaryWindow =
@@ -49,6 +49,7 @@ int main()
     }
 
     windowSystem.shutdown();
+    engine.loggingSystem.shutdown();
 
     return EXIT_SUCCESS;
 }

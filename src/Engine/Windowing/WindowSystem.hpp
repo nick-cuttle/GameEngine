@@ -5,15 +5,12 @@
 
 #pragma once
 
+#include <Engine/Core/Logger.hpp>
+
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
-
-namespace spdlog
-{
-class logger;
-}
 
 namespace Engine
 {
@@ -107,7 +104,7 @@ public:
     /// @details This operation is idempotent. Calling initialize() after successful initialization
     ///          has no effect.
     /// @throws std::runtime_error if the platform video subsystem cannot be initialized.
-    void initialize(std::shared_ptr<spdlog::logger> logger);
+    void initialize(Logger logger);
 
     /// @brief Destroys managed windows and shuts down the platform video subsystem.
     /// @details This operation is idempotent. Calling shutdown() before initialization or after a
@@ -133,7 +130,7 @@ private:
     struct Implementation;
     /// @brief Owning pointer to the platform-specific implementation state.
     std::unique_ptr<Implementation> implementation;
-    std::shared_ptr<spdlog::logger> m_Logger;
+    Logger m_Logger;
 };
 
 } // namespace Engine

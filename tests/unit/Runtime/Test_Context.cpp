@@ -16,7 +16,7 @@ TEST_CASE("Context", "[unit][runtime][context]")
 
     Engine::Context context;
     context.initialize();
-    context.logger.root()->flush();
+    context.loggingSystem.flush();
 
     SECTION("initialize")
     {
@@ -28,8 +28,8 @@ TEST_CASE("Context", "[unit][runtime][context]")
         REQUIRE(std::filesystem::is_directory(context.paths.logs()));
 
         // confirm logger is initialized with expected defaults and log file is created.
-        REQUIRE(context.logger.root() != nullptr);
-        REQUIRE(context.logger.root()->name() == "Engine");
         REQUIRE(std::filesystem::exists(context.paths.logs() / "Engine.log"));
     }
+
+    context.loggingSystem.shutdown();
 }

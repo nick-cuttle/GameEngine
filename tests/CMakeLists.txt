@@ -13,7 +13,7 @@ include(Catch)
 add_executable(EngineUnitTests
     unit/Core/Test_ConsoleCapture.cpp
     unit/Core/Test_LogAssertions.cpp
-    unit/Core/Test_Logger.cpp
+    unit/Core/Test_LoggingSystem.cpp
     unit/Core/Test_Paths.cpp
     unit/Input/Test_InputSystem.cpp
     unit/Runtime/Test_Context.cpp
@@ -24,6 +24,7 @@ target_link_libraries(EngineUnitTests
     PRIVATE
         Engine
         SDL3::SDL3
+        spdlog::spdlog
         Catch2::Catch2WithMain
 )
 

@@ -18,13 +18,12 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
     Engine::Tests::TestTempDirectory tempDirectory("Test WindowSystem");
     Engine::Tests::SpdlogTestGuard spdlog;
 
-    Engine::Logger logger;
+    Engine::LoggingSystem loggingSystem;
 
     std::filesystem::path const logDir = tempDirectory.path() / "logs";
-    std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
 
-    logger.initialize({.logDirectory = logDir});
-    auto windowLogger = logger.createSubsystem("WindowSystem");
+    loggingSystem.initialize({.logDirectory = logDir});
+    auto windowLogger = loggingSystem.createSubsystemLogger("WindowSystem");
 
     Engine::WindowSystem windowSystem;
     windowSystem.initialize(windowLogger);
@@ -88,4 +87,7 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 
         windowSystem.shutdown();
     }
+
+    windowSystem.shutdown();
+    loggingSystem.shutdown();
 }
