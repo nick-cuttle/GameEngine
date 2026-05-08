@@ -8,9 +8,7 @@
 #include <Engine/Runtime/Context.hpp>
 #include <Engine/Windowing/WindowSystem.hpp>
 
-#include <concepts>
 #include <cstdlib>
-#include <type_traits>
 #include <variant>
 
 /// @brief  Main entry point for the application.
@@ -40,20 +38,16 @@ int main()
 
         for (Engine::WindowEvent const &windowEvent : windowEventPollResult.windowEvents)
         {
-            std::visit(
-                [&](auto const &windowEventPayload)
-                {
-                    using WindowEventPayload = std::decay_t<decltype(windowEventPayload)>;
+            Engine::WindowCloseRequested const *windowCloseRequestedEvent =
+                std::get_if<Engine::WindowCloseRequested>(&windowEvent);
 
-                    if constexpr (std::same_as<WindowEventPayload, Engine::WindowCloseRequested>)
-                    {
-                        if (windowEventPayload.windowIdentifier == primaryWindow)
-                        {
-                            isRunning = false;
-                        }
-                    }
-                },
-                windowEvent);
+            bool const isPrimaryWindowCloseRequested =
+                windowCloseRequestedEvent != nullptr &&
+                windowCloseRequestedEvent->windowIdentifier == primaryWindow;
+            if (isPrimaryWindowCloseRequested)
+            {
+                isRunning = false;
+            }
         }
     }
 
