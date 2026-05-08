@@ -22,8 +22,9 @@ public:
 
     /// @brief Applies an engine-owned input event to the current input state.
     /// @details Invalid key/button values are ignored. Press events update held state and may set
-    /// the current-frame pressed flag. Release events clear held state and may set the current-frame
-    /// released flag. Movement and scroll events accumulate deltas for the active frame.
+    /// the current-frame pressed flag. Release events clear held state and may set the
+    /// current-frame released flag. Movement and scroll events accumulate deltas for the active
+    /// frame.
     void submit(Event const &event);
 
     /// @brief Returns whether a key is currently held down.

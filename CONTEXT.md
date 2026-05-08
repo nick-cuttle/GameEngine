@@ -2,6 +2,80 @@
 
 This context describes the core runtime concepts for a custom game engine.
 
+## Purpose
+
+GameEngine is a C++23 engine skeleton that currently owns core startup services, an SDL-backed
+Window System, platform-neutral input state, and focused unit test infrastructure. The repository
+builds a static `Engine` library and a small `GameEngine` executable that composes the current
+systems.
+
+## Architecture Map
+
+- `src/Engine/Core` contains cross-cutting services. `Paths` resolves the executable-derived base
+  path, logs directory, and assets directory. `LoggingSystem` owns spdlog setup and issues
+  engine-owned `Logger` handles.
+- `src/Engine/Runtime` contains `Context`, the startup composition point for engine-wide paths and
+  logging.
+- `src/Engine/Windowing` contains `WindowSystem`, the SDL boundary for video initialization,
+  primary-window creation, shutdown, and translation from SDL window events to engine-owned
+  `WindowEvent` payloads.
+- `src/Engine/Input` contains platform-neutral input codes, input event payloads, and
+  `Engine::Input::System`, which tracks held state plus per-frame transitions and deltas.
+- `src/main.cpp` initializes `Context`, creates the `WindowSystem` logger, opens the Primary
+  Window, then polls window events until the platform requests quit or the Primary Window receives
+  a Close Request.
+- `tests/unit` contains Catch2 unit tests discovered by CTest. `tests/support` contains reusable
+  Test Harness helpers for temporary directories, logging state isolation, log assertions, and
+  console capture.
+- `docs/adr` records durable architectural decisions. ADR 0001 keeps the Window System separate
+  from the Renderer. ADR 0002 keeps concrete logging backend types out of public subsystem
+  interfaces.
+
+## Important Flows
+
+**Startup**:
+`main()` creates `Engine::Context`, which initializes `Paths` first and then initializes
+`LoggingSystem` with the resolved logs directory. `main()` creates a `WindowSystem` subsystem
+logger, initializes the Window System, creates the Primary Window, and enters the Runtime Loop.
+
+**Window event polling**:
+`WindowSystem::pollWindowEvents()` drains the SDL event queue. Application quit requests are
+reported separately from window-specific events. Only events for managed engine windows are
+translated into `WindowEvent` values; unmanaged and unsupported events are ignored.
+
+**Input state updates**:
+`Engine::Input::System::beginFrame()` clears transient pressed, released, movement, and scroll
+state while preserving held keys, held mouse buttons, and the latest mouse position.
+`submit()` accepts only engine-owned input events and rejects sentinel or out-of-range key and
+mouse button values before indexing internal state.
+
+**Logging lifecycle**:
+`LoggingSystem::initialize()` creates the log directory, installs console and file sinks, registers
+the root `Engine` logger, and writes `Engine.log`. Subsystems receive `Logger` handles from
+`createSubsystemLogger()`. Issued handles reject writes after `LoggingSystem::shutdown()`.
+
+## Development Workflows
+
+- Build with `./scripts/ezbuild.sh Debug`, `./scripts/ezbuild.sh Release`, or no argument for both.
+- Run tests with `./scripts/eztest.sh Debug`; use `--list`, `--label <regex>`, and
+  `--test <regex>` for discovery and focused runs.
+- Format C++ source and headers with `./scripts/ezformat.sh`.
+- Generate coverage with `./scripts/ezcoverage.sh Debug`; this requires `gcovr`.
+- Helper scripts support Linux and MSYS or MinGW-style Windows shells. The CMake project itself is
+  the cross-platform source of truth.
+
+## Testing Strategy
+
+- Unit tests should target one public engine type or helper at a time and should not require the
+  Runtime Loop.
+- Window System tests use SDL's dummy video backend when they need SDL initialization without a
+  display.
+- Tests that need filesystem output should use `TestTempDirectory` so temporary data stays isolated
+  under `tests/tmp`.
+- Tests that initialize logging should use `SpdlogTestGuard` so spdlog's process-global registry is
+  reset before and after the test.
+- Log assertion helpers compare stable log message content after removing timestamp prefixes.
+
 ## Language
 
 **Window System**:

@@ -1,16 +1,114 @@
 # GameEngine
 
-A custom game engine project.
+A C++23 custom game engine project. The current codebase provides an engine static library, a
+small executable that opens the primary window, and focused unit tests for core runtime systems.
+
+For project vocabulary, subsystem boundaries, and architectural decisions, start with
+[`CONTEXT.md`](CONTEXT.md) and [`docs/adr/`](docs/adr/).
+
+## Requirements
+
+- CMake 3.16 or newer
+- A C++23 compiler
+- Git, because dependencies are fetched with CMake `FetchContent`
+- A POSIX-compatible shell for the helper scripts
+- `clang-format` for `scripts/ezformat.sh`
+- `gcovr` for `scripts/ezcoverage.sh`
+
+The engine code targets Linux and Windows. The helper scripts select Unix Makefiles on Linux and
+MinGW Makefiles on MSYS or MinGW shells. For other Windows generators, use the equivalent CMake
+commands directly.
 
 ## Building
 
-To build, use ``scripts/ezbuild.sh``. The general format is:
+The helper script configures and builds under `build/<build_type>`:
 
 ```bash
 ./scripts/ezbuild.sh <build_type>
 ```
 
-``build_type``: Can either be `Debug`, `Release`, or none to build both 
+`build_type` can be `Debug`, `Release`, or omitted to build both configurations.
+
+Equivalent direct CMake commands:
+
+```bash
+cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+cmake --build build/Debug
+```
+
+Common CMake options:
+
+- `ENGINE_WARNINGS_AS_ERRORS`: treats compiler warnings as errors. Defaults to `ON`.
+- `BUILD_TESTS`: builds the Catch2 unit test target when CTest is enabled. Defaults to `ON`.
+- `SDL_FORCE_FETCH`: fetches SDL3 from source instead of requiring an installed SDL3 package.
+  Defaults to `ON`.
+- `ENGINE_ENABLE_SDL_GPU`: enables SDL GPU support when fetching SDL. Defaults to `OFF`.
+- `ENGINE_ENABLE_SDL_VULKAN`: enables SDL Vulkan support when fetching SDL. Defaults to `OFF`.
+
+## Running
+
+After building, run the executable from the chosen configuration:
+
+```bash
+./build/Debug/bin/GameEngine
+```
+
+On MinGW-style Windows builds, the executable name is usually `GameEngine.exe`. The
+`scripts/ezrun.sh` helper currently expects that `.exe` name.
+
+## Testing
+
+Build first, then run unit tests with:
+
+```bash
+./scripts/eztest.sh Debug
+```
+
+With no build type, `eztest.sh` runs `Debug` and then `Release`. Useful filters:
+
+```bash
+./scripts/eztest.sh Debug --list
+./scripts/eztest.sh Debug --label unit
+./scripts/eztest.sh Debug --test WindowSystem
+```
+
+CTest discovers the Catch2 test cases from `EngineUnitTests`. Current unit tests cover:
+
+- core paths and logging
+- runtime context initialization
+- SDL-backed window lifecycle and event translation
+- frame-based input state
+- shared test support helpers
+
+## Formatting And Coverage
+
+Format C++ source and headers:
+
+```bash
+./scripts/ezformat.sh
+```
+
+Generate coverage reports with GCC coverage instrumentation:
+
+```bash
+./scripts/ezcoverage.sh Debug
+```
+
+Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.
+
+## Project Layout
+
+- `src/Engine/Core`: engine paths and engine-owned logging handles.
+- `src/Engine/Runtime`: context object that composes engine-wide services.
+- `src/Engine/Windowing`: SDL-backed window lifecycle and window event translation.
+- `src/Engine/Input`: engine-owned input codes, events, and per-frame input state.
+- `src/main.cpp`: executable startup and primary-window runtime loop.
+- `tests/unit`: Catch2 unit tests registered with CTest.
+- `tests/support`: shared test harness helpers.
+- `scripts`: local build, test, format, coverage, run, and path helpers.
+- `docs/adr`: durable architectural decisions.
 
 ## Notes
-This project is in its early stages. Expect frequent changes as the core systems are developed.
+
+This project is in its early stages. Renderer implementation is not present yet; renderer-related
+language in `CONTEXT.md` and ADRs describes the intended subsystem boundary.

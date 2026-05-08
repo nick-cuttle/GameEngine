@@ -9,7 +9,9 @@ namespace Engine::Input
 {
 
 /// @brief Key codes for keyboard input events.
-/// @details These are independent of any platform-specific codes and should be used in engine-owned
+/// @details These values are independent of platform-specific key codes. Platform translators
+///          should convert native keyboard input into these values before submitting events to the
+///          Input System.
 enum class KeyCode
 {
     Unknown = 0,
@@ -74,7 +76,9 @@ enum class KeyCode
 };
 
 /// @brief Mouse button codes for mouse input events.
-/// @details These are independent of any platform-specific codes and should be used in engine-owned
+/// @details These values are independent of platform-specific button codes. Platform translators
+///          should convert native mouse input into these values before submitting events to the
+///          Input System.
 enum class MouseButton
 {
     Unknown = 0,
