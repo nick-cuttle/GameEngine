@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace Engine
@@ -21,9 +22,18 @@ namespace Engine
 struct WindowSize
 {
     /// @brief Logical width in desktop units.
-    int width = 1280;
+    std::uint32_t width = 1280;
     /// @brief Logical height in desktop units.
-    int height = 720;
+    std::uint32_t height = 720;
+};
+
+/// @brief Pixel dimensions of the drawable graphics surface attached to a window.
+struct GraphicsSurfaceSize
+{
+    /// @brief Drawable surface width in pixels.
+    std::uint32_t width = 0;
+    /// @brief Drawable surface height in pixels.
+    std::uint32_t height = 0;
 };
 
 /// @brief Stable reference to a window managed by the Window System.
@@ -48,23 +58,90 @@ struct WindowConfiguration
     bool isVisible = true;
 };
 
-/// @brief Type of window-specific event produced by the Window System.
-enum class WindowEventType
+/// @brief Logical position of an engine-owned window.
+struct WindowPosition
 {
-    /// @brief The user or platform requested that a managed window close.
-    CloseRequest
+    /// @brief Horizontal position in desktop coordinates.
+    std::int32_t horizontalPosition = 0;
+    /// @brief Vertical position in desktop coordinates.
+    std::int32_t verticalPosition = 0;
 };
 
-/// @brief Engine-owned description of a window-specific event.
-/// @details Window events are translated from platform events and only reference windows currently
-///          managed by the Window System.
-struct WindowEvent
+/// @brief Event emitted when a window receives a close request.
+struct WindowCloseRequested
 {
-    /// @brief Kind of window event that was observed.
-    WindowEventType type;
-    /// @brief Window that emitted the event.
+    /// @brief Window that received the close request.
     WindowIdentifier windowIdentifier;
 };
+
+/// @brief Event emitted when a window changes position.
+struct WindowMoved
+{
+    /// @brief Window that changed position.
+    WindowIdentifier windowIdentifier;
+    /// @brief New window position.
+    WindowPosition windowPosition;
+};
+
+/// @brief Event emitted when a window changes logical size.
+struct WindowSizeChanged
+{
+    /// @brief Window that changed logical size.
+    WindowIdentifier windowIdentifier;
+    /// @brief New logical window size.
+    WindowSize windowSize;
+};
+
+/// @brief Event emitted when the drawable graphics surface changes size.
+struct GraphicsSurfaceSizeChanged
+{
+    /// @brief Window whose graphics surface changed size.
+    WindowIdentifier windowIdentifier;
+    /// @brief New drawable graphics surface size.
+    GraphicsSurfaceSize graphicsSurfaceSize;
+};
+
+/// @brief Event emitted when a window gains input focus.
+struct WindowFocusGained
+{
+    /// @brief Window that gained input focus.
+    WindowIdentifier windowIdentifier;
+};
+
+/// @brief Event emitted when a window loses input focus.
+struct WindowFocusLost
+{
+    /// @brief Window that lost input focus.
+    WindowIdentifier windowIdentifier;
+};
+
+/// @brief Event emitted when a window is minimized.
+struct WindowMinimized
+{
+    /// @brief Window that was minimized.
+    WindowIdentifier windowIdentifier;
+};
+
+/// @brief Event emitted when a window is restored from a minimized state.
+struct WindowRestored
+{
+    /// @brief Window that was restored.
+    WindowIdentifier windowIdentifier;
+};
+
+/// @brief Event emitted when a window display scale changes.
+struct WindowDisplayScaleChanged
+{
+    /// @brief Window whose display scale changed.
+    WindowIdentifier windowIdentifier;
+    /// @brief New display scale for the window.
+    float displayScale = 1.0F;
+};
+
+/// @brief Engine-owned window event variant produced by the Window System.
+using WindowEvent = std::variant<WindowCloseRequested, WindowMoved, WindowSizeChanged,
+                                 GraphicsSurfaceSizeChanged, WindowFocusGained, WindowFocusLost,
+                                 WindowMinimized, WindowRestored, WindowDisplayScaleChanged>;
 
 /// @brief Batch of events and application-level quit state produced by event polling.
 /// @details A single poll drains the platform event queue available at that time. Window-specific

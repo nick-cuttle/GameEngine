@@ -12,6 +12,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
+#include <variant>
 
 TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 {
@@ -24,6 +25,9 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 
     loggingSystem.initialize({.logDirectory = logDir});
     auto windowLogger = loggingSystem.createSubsystemLogger("WindowSystem");
+
+    // Select a display-independent video backend before WindowSystem initializes SDL.
+    REQUIRE(SDL_SetHintWithPriority(SDL_HINT_VIDEO_DRIVER, "dummy", SDL_HINT_OVERRIDE));
 
     Engine::WindowSystem windowSystem;
     windowSystem.initialize(windowLogger);
@@ -48,8 +52,6 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 
     SECTION("poll result reports application quit requests")
     {
-        REQUIRE(SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy"));
-
         SDL_Event quitEvent{};
         quitEvent.type = SDL_EVENT_QUIT;
 
@@ -65,8 +67,6 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 
     SECTION("poll result reports primary window close requests")
     {
-        REQUIRE(SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy"));
-
         Engine::WindowConfiguration configuration;
         configuration.isVisible = false;
 
@@ -82,8 +82,12 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 
         REQUIRE_FALSE(pollResult.isApplicationQuitRequested);
         REQUIRE(pollResult.windowEvents.size() == 1);
-        REQUIRE(pollResult.windowEvents[0].type == Engine::WindowEventType::CloseRequest);
-        REQUIRE(pollResult.windowEvents[0].windowIdentifier.value == primaryWindow.value);
+
+        Engine::WindowCloseRequested const *windowCloseRequested =
+            std::get_if<Engine::WindowCloseRequested>(&pollResult.windowEvents[0]);
+
+        REQUIRE(windowCloseRequested != nullptr);
+        REQUIRE(windowCloseRequested->windowIdentifier.value == primaryWindow.value);
 
         windowSystem.shutdown();
     }

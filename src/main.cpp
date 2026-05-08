@@ -9,6 +9,7 @@
 #include <Engine/Windowing/WindowSystem.hpp>
 
 #include <cstdlib>
+#include <variant>
 
 /// @brief  Main entry point for the application.
 /// @return EXIT_SUCCESS on successful execution, otherwise EXIT_FAILURE.
@@ -37,9 +38,11 @@ int main()
 
         for (Engine::WindowEvent const &windowEvent : windowEventPollResult.windowEvents)
         {
+            Engine::WindowCloseRequested const *windowCloseRequested =
+                std::get_if<Engine::WindowCloseRequested>(&windowEvent);
             bool shouldClosePrimaryWindow =
-                windowEvent.type == Engine::WindowEventType::CloseRequest &&
-                windowEvent.windowIdentifier.value == primaryWindow.value;
+                windowCloseRequested != nullptr &&
+                windowCloseRequested->windowIdentifier.value == primaryWindow.value;
 
             if (shouldClosePrimaryWindow)
             {

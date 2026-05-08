@@ -191,10 +191,8 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
             continue;
         }
 
-        pollResult.windowEvents.push_back(WindowEvent{
-            .type = WindowEventType::CloseRequest,
-            .windowIdentifier = WindowIdentifier{windowIdentifier},
-        });
+        pollResult.windowEvents.push_back(
+            WindowCloseRequested{.windowIdentifier = WindowIdentifier{windowIdentifier}});
     }
 
     return pollResult;
