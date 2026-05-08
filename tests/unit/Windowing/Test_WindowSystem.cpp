@@ -3,15 +3,32 @@
  * @brief Tests public Window System concepts that do not require platform windows.
  */
 
+#include <Engine/Core/Logger.hpp>
 #include <Engine/Windowing/WindowSystem.hpp>
 
 #include <SDL3/SDL.h>
+#include <SpdlogTestGuard.hpp>
+#include <TestTempDirectory.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 
 TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
 {
+    Engine::Tests::TestTempDirectory tempDirectory("Test WindowSystem");
+    Engine::Tests::SpdlogTestGuard spdlog;
+
+    Engine::Logger logger;
+
+    std::filesystem::path const logDir = tempDirectory.path() / "logs";
+    std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
+
+    logger.initialize({.logDirectory = logDir});
+    auto windowLogger = logger.createSubsystem("WindowSystem");
+
+    Engine::WindowSystem windowSystem;
+    windowSystem.initialize(windowLogger);
+
     SECTION("primary window configuration uses issue 20 defaults")
     {
         Engine::WindowConfiguration configuration;
@@ -34,9 +51,6 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
     {
         REQUIRE(SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy"));
 
-        Engine::WindowSystem windowSystem;
-        windowSystem.initialize();
-
         SDL_Event quitEvent{};
         quitEvent.type = SDL_EVENT_QUIT;
 
@@ -53,9 +67,6 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
     SECTION("poll result reports primary window close requests")
     {
         REQUIRE(SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy"));
-
-        Engine::WindowSystem windowSystem;
-        windowSystem.initialize();
 
         Engine::WindowConfiguration configuration;
         configuration.isVisible = false;

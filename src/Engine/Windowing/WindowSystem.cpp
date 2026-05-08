@@ -5,6 +5,7 @@
 
 #include "WindowSystem.hpp"
 
+#include "Engine/Core/Logger.hpp"
 #include <SDL3/SDL.h>
 #include <cstdint>
 #include <stdexcept>
@@ -63,11 +64,18 @@ WindowSystem::~WindowSystem()
     shutdown();
 }
 
-void WindowSystem::initialize()
+void WindowSystem::initialize(std::shared_ptr<spdlog::logger> logger)
 {
+    m_Logger = logger;
+
+    if (!m_Logger)
+    {
+        throw std::runtime_error("Logger cannot be nullptr");
+    }
+
     if (implementation->isInitialized)
     {
-        // SDL video initialization is treated as an instance-level idempotent operation.
+        m_Logger->trace("Implementation has already been initialized.");
         return;
     }
 
@@ -77,13 +85,14 @@ void WindowSystem::initialize()
     }
 
     implementation->isInitialized = true;
+    m_Logger->info("Window has been created.");
 }
 
 void WindowSystem::shutdown()
 {
     if (!implementation->isInitialized)
     {
-        // Shutdown may be reached from explicit user code and from the destructor.
+        m_Logger->trace("Cannot shutdown if not initialized.");
         return;
     }
 
@@ -96,6 +105,8 @@ void WindowSystem::shutdown()
 
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
     implementation->isInitialized = false;
+
+    m_Logger->info("Window has been closed.");
 }
 
 WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &configuration)
@@ -138,11 +149,11 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
             // Some platforms require a first committed buffer before a newly visible window maps.
             presentInitialVisibilityBuffer(window);
         }
-        catch (...)
+        catch (std::exception const &exception)
         {
             SDL_DestroyWindow(window);
 
-            throw;
+            throw exception;
         }
     }
 

@@ -18,9 +18,11 @@ int main()
     engine.initialize();
 
     Engine::WindowSystem windowSystem;
-    windowSystem.initialize();
+    auto windowLogger = engine.logger.createSubsystem("WindowSystem");
+    windowSystem.initialize(windowLogger);
 
-    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(Engine::WindowConfiguration{});
+    Engine::WindowIdentifier primaryWindow =
+        windowSystem.createPrimaryWindow(Engine::WindowConfiguration{});
 
     bool isRunning = true;
 
