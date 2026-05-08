@@ -10,10 +10,12 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -28,78 +30,109 @@ constexpr auto kLogFileName = "Engine.log";
 
 } // namespace
 
+struct LoggingSystem::BackendState
+{
+    std::atomic_bool isAlive = true;
+    std::shared_ptr<spdlog::logger> rootLogger;
+    std::vector<std::shared_ptr<spdlog::logger>> issuedLoggers;
+};
+
 struct Logger::Implementation
 {
-    explicit Implementation(std::shared_ptr<spdlog::logger> logger) : logger(std::move(logger))
+    Implementation(std::shared_ptr<LoggingSystem::BackendState> backendState,
+                   std::weak_ptr<spdlog::logger> logger, std::string const &loggerName)
+        : backendState(std::move(backendState)), logger(std::move(logger)),
+          loggerName(std::move(loggerName))
     {
     }
 
-    std::shared_ptr<spdlog::logger> logger;
+    std::shared_ptr<spdlog::logger> requireLiveLogger() const
+    {
+        if (!backendState->isAlive.load())
+        {
+            throw std::runtime_error("Logger '" + loggerName +
+                                     "' cannot write after LoggingSystem shutdown");
+        }
+
+        auto lockedLogger = logger.lock();
+        if (!lockedLogger)
+        {
+            throw std::runtime_error("Logger '" + loggerName +
+                                     "' no longer references backend logger state");
+        }
+
+        return lockedLogger;
+    }
+
+    template <typename LogFunction> void write(LogFunction logFunction) const
+    {
+        logFunction(*requireLiveLogger());
+    }
+
+    std::shared_ptr<LoggingSystem::BackendState> backendState;
+    std::weak_ptr<spdlog::logger> logger;
+    std::string loggerName;
 };
 
-struct LoggingSystem::BackendState
-{
-    std::shared_ptr<spdlog::logger> rootLogger;
-};
-
-Logger::Logger(std::shared_ptr<Implementation> implementation) :
-    implementation(std::move(implementation))
+Logger::Logger(std::shared_ptr<Implementation> implementation)
+    : implementation(std::move(implementation))
 {
 }
 
 void Logger::trace(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->trace("{}", message);
+        implementation->write([message](spdlog::logger &logger) { logger.trace("{}", message); });
     }
 }
 
 void Logger::debug(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->debug("{}", message);
+        implementation->write([message](spdlog::logger &logger) { logger.debug("{}", message); });
     }
 }
 
 void Logger::info(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->info("{}", message);
+        implementation->write([message](spdlog::logger &logger) { logger.info("{}", message); });
     }
 }
 
 void Logger::warn(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->warn("{}", message);
+        implementation->write([message](spdlog::logger &logger) { logger.warn("{}", message); });
     }
 }
 
 void Logger::error(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->error("{}", message);
+        implementation->write([message](spdlog::logger &logger) { logger.error("{}", message); });
     }
 }
 
 void Logger::critical(std::string_view message) const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->critical("{}", message);
+        implementation->write([message](spdlog::logger &logger)
+                              { logger.critical("{}", message); });
     }
 }
 
 void Logger::flush() const
 {
-    if (implementation && implementation->logger)
+    if (implementation)
     {
-        implementation->logger->flush();
+        implementation->write([](spdlog::logger &logger) { logger.flush(); });
     }
 }
 
@@ -158,6 +191,7 @@ void LoggingSystem::initialize(LoggingConfiguration const &configuration)
 
     // IMPORTANT: engine logger is the default sink
     spdlog::set_default_logger(state->rootLogger);
+    state->issuedLoggers.push_back(state->rootLogger);
 
     backendState = std::move(state);
 
@@ -172,7 +206,8 @@ Logger LoggingSystem::root() const
         throw std::runtime_error("LoggingSystem must be initialized before requesting root logger");
     }
 
-    return Logger(std::make_shared<Logger::Implementation>(backendState->rootLogger));
+    return Logger(std::make_shared<Logger::Implementation>(backendState, backendState->rootLogger,
+                                                           backendState->rootLogger->name()));
 }
 
 Logger LoggingSystem::createSubsystemLogger(std::string_view subsystemName) const
@@ -196,8 +231,9 @@ Logger LoggingSystem::createSubsystemLogger(std::string_view subsystemName) cons
     spdlog::register_logger(logger);
 
     logger->info("Subsystem logger '{}' created", name);
+    backendState->issuedLoggers.push_back(logger);
 
-    return Logger(std::make_shared<Logger::Implementation>(std::move(logger)));
+    return Logger(std::make_shared<Logger::Implementation>(backendState, std::move(logger), name));
 }
 
 void LoggingSystem::flush() const
@@ -208,6 +244,12 @@ void LoggingSystem::flush() const
 void LoggingSystem::shutdown()
 {
     flush();
+    if (backendState)
+    {
+        backendState->isAlive = false;
+        backendState->issuedLoggers.clear();
+        backendState->rootLogger.reset();
+    }
     backendState.reset();
     spdlog::set_default_logger(nullptr);
     spdlog::drop_all();

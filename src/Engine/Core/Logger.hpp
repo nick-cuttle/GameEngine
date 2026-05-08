@@ -125,6 +125,8 @@ public:
     void shutdown();
 
 private:
+    friend class Logger;
+
     struct BackendState;
 
     std::shared_ptr<BackendState> backendState;

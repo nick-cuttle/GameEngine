@@ -60,7 +60,10 @@ WindowSystem::WindowSystem() : implementation(std::make_unique<Implementation>()
 
 WindowSystem::~WindowSystem()
 {
-    shutdown();
+    if (implementation->isInitialized)
+    {
+        shutdown();
+    }
 }
 
 void WindowSystem::initialize(Logger logger)

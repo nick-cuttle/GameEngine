@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 namespace
 {
@@ -32,12 +33,15 @@ std::string readTextFile(std::filesystem::path const &path)
 
 } // namespace
 
-TEST_CASE("LoggingSystem rejects use before initialization",
-          "[unit][core][logging-system]")
+TEST_CASE("LoggingSystem", "[unit][core][logging-system]")
 {
+    Engine::Tests::TestTempDirectory tempDirectory("Test_LoggingSystem");
     Engine::Tests::SpdlogTestGuard spdlog;
 
     Engine::LoggingSystem loggingSystem;
+
+    std::filesystem::path const logDir = tempDirectory.path() / "logs";
+    std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
 
     SECTION("root before initialize is rejected")
     {
@@ -48,17 +52,6 @@ TEST_CASE("LoggingSystem rejects use before initialization",
     {
         REQUIRE_THROWS(loggingSystem.createSubsystemLogger(kWindowSystemLoggerName));
     }
-}
-
-TEST_CASE("LoggingSystem", "[unit][core][logging-system]")
-{
-    Engine::Tests::TestTempDirectory tempDirectory("Test_LoggingSystem");
-    Engine::Tests::SpdlogTestGuard spdlog;
-
-    Engine::LoggingSystem loggingSystem;
-
-    std::filesystem::path const logDir = tempDirectory.path() / "logs";
-    std::filesystem::path const kLogFile = tempDirectory.path() / "logs" / "Engine.log";
 
     loggingSystem.initialize({.logDirectory = logDir});
     loggingSystem.flush();
@@ -116,6 +109,38 @@ TEST_CASE("LoggingSystem", "[unit][core][logging-system]")
 
         Engine::Tests::confirmWarningLogMessage(readTextFile(kLogFile), kEngineLoggerName,
                                                 "Flush writes this warning");
+    }
+
+    SECTION("issued logger handles reject writes after shutdown")
+    {
+        Engine::Logger rootLogger = loggingSystem.root();
+
+        Engine::Logger subsystemLogger =
+            loggingSystem.createSubsystemLogger(kWindowSystemLoggerName);
+
+        loggingSystem.shutdown();
+
+        try
+        {
+            rootLogger.error("Write after shutdown");
+            FAIL("Expected logger writes after shutdown to throw");
+        }
+        catch (std::runtime_error const &error)
+        {
+            REQUIRE(std::string(error.what()) ==
+                    "Logger 'Engine' cannot write after LoggingSystem shutdown");
+        }
+
+        try
+        {
+            subsystemLogger.error("Write after shutdown");
+            FAIL("Expected logger writes after shutdown to throw");
+        }
+        catch (std::runtime_error const &error)
+        {
+            REQUIRE(std::string(error.what()) ==
+                    "Logger 'WindowSystem' cannot write after LoggingSystem shutdown");
+        }
     }
 
     SECTION("critical logger writes under Engine")
