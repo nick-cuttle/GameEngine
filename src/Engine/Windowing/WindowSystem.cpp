@@ -5,7 +5,6 @@
 
 #include "WindowSystem.hpp"
 
-#include "Engine/Core/Logger.hpp"
 #include <SDL3/SDL.h>
 #include <cstdint>
 #include <stdexcept>
@@ -61,21 +60,19 @@ WindowSystem::WindowSystem() : implementation(std::make_unique<Implementation>()
 
 WindowSystem::~WindowSystem()
 {
-    shutdown();
+    if (implementation->isInitialized)
+    {
+        shutdown();
+    }
 }
 
-void WindowSystem::initialize(std::shared_ptr<spdlog::logger> logger)
+void WindowSystem::initialize(Logger logger)
 {
     m_Logger = logger;
 
-    if (!m_Logger)
-    {
-        throw std::runtime_error("Logger cannot be nullptr");
-    }
-
     if (implementation->isInitialized)
     {
-        m_Logger->trace("Implementation has already been initialized.");
+        m_Logger.trace("Implementation has already been initialized.");
         return;
     }
 
@@ -85,14 +82,14 @@ void WindowSystem::initialize(std::shared_ptr<spdlog::logger> logger)
     }
 
     implementation->isInitialized = true;
-    m_Logger->info("Window has been created.");
+    m_Logger.info("Window has been created.");
 }
 
 void WindowSystem::shutdown()
 {
     if (!implementation->isInitialized)
     {
-        m_Logger->trace("Cannot shutdown if not initialized.");
+        m_Logger.trace("Cannot shutdown if not initialized.");
         return;
     }
 
@@ -106,7 +103,7 @@ void WindowSystem::shutdown()
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
     implementation->isInitialized = false;
 
-    m_Logger->info("Window has been closed.");
+    m_Logger.info("Window has been closed.");
 }
 
 WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &configuration)

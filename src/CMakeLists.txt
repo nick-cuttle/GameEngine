@@ -33,6 +33,14 @@ else()
     find_package(SDL3 REQUIRED CONFIG)
 endif()
 
+# Fetch fmt for the public Logger formatting API.
+FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG 12.1.0
+)
+FetchContent_MakeAvailable(fmt)
+
 # Fetch spdlog
 set(SPDLOG_FORCE_FETCH ON)
 FetchContent_Declare(
@@ -59,8 +67,8 @@ target_include_directories(Engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# Link spdlog to Engine (IMPORTANT)
-target_link_libraries(Engine PUBLIC spdlog::spdlog)
+# fmt is part of the public Logger formatting API; spdlog remains hidden in Logger.cpp.
+target_link_libraries(Engine PUBLIC fmt::fmt PRIVATE spdlog::spdlog)
 
 # Set compiler warnings for the Engine library.
 if(MSVC)

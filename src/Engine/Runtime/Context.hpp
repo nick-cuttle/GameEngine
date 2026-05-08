@@ -22,7 +22,7 @@ public:
 
     /// @brief Engine-wide filesystem paths initialized during context startup.
     Paths paths;
-    /// @brief Engine-wide logger initialized during context startup.
-    Logger logger;
+    /// @brief Engine-wide logging backend initialized during context startup.
+    LoggingSystem loggingSystem;
 };
 } // namespace Engine
