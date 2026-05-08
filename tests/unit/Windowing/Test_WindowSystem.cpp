@@ -71,6 +71,9 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         configuration.isVisible = false;
 
         Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(configuration);
+        Engine::WindowEventPollResult creationPollResult = windowSystem.pollWindowEvents();
+
+        REQUIRE_FALSE(creationPollResult.isApplicationQuitRequested);
 
         SDL_Event closeRequestEvent{};
         closeRequestEvent.type = SDL_EVENT_WINDOW_CLOSE_REQUESTED;
@@ -90,6 +93,64 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         REQUIRE(windowCloseRequested->windowIdentifier.value == primaryWindow.value);
 
         windowSystem.shutdown();
+    }
+
+    SECTION("window size uses explicit unsigned dimensions")
+    {
+        // TODO: Assert WindowSize width and height use std::uint32_t.}
+    }
+
+    SECTION("graphics surface size is distinct from window size")
+    {
+        // TODO: Assert GraphicsSurfaceSize exists as a separate public type from WindowSize.
+    }
+
+    SECTION("window position supports signed coordinates")
+    {
+        // TODO: Assert WindowPosition coordinates can represent negative values.
+    }
+
+    SECTION("window event payloads are strongly typed")
+    {
+        // TODO: Assert WindowEvent is a variant of specific payload types, not a type enum plus
+        // shared fields.
+    }
+
+    SECTION("poll result reports window movement")
+    {
+        // TODO: Push SDL_EVENT_WINDOW_MOVED and assert WindowMoved payload.
+    }
+
+    SECTION("poll result reports window size changes")
+    {
+        // TODO: Push SDL_EVENT_WINDOW_RESIZED and assert WindowSizeChanged payload.
+    }
+
+    SECTION("poll result reports graphics surface size changes")
+    {
+        // TODO: Push SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED and assert GraphicsSurfaceSizeChanged
+        // payload.
+    }
+
+    SECTION("poll result reports focus changes")
+    {
+        // TODO: Push focus gained and lost events and assert matching payloads.
+    }
+
+    SECTION("poll result reports minimized and restored state")
+    {
+        // TODO: Push minimized and restored events and assert matching payloads.
+    }
+
+    SECTION("poll result reports display scale changes")
+    {
+        // TODO: Push SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED and assert
+        // WindowDisplayScaleChanged payload.
+    }
+
+    SECTION("poll result ignores non-window events")
+    {
+        // TODO: Push an SDL event that should not become an Engine::WindowEvent.
     }
 
     windowSystem.shutdown();

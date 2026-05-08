@@ -41,6 +41,58 @@ void presentInitialVisibilityBuffer(SDL_Window *window)
     }
 }
 
+/// @brief Converts an SDL window event for a managed window into an engine window event.
+/// @param platformEvent SDL event containing the window event payload to translate.
+/// @param platformWindow SDL window associated with the event; required for display scale queries.
+/// @return The translated engine event, or std::nullopt when the SDL event type is not handled.
+std::optional<Engine::WindowEvent> translateManagedWindowEvent(SDL_Event const &platformEvent,
+                                                               SDL_Window *platformWindow)
+{
+    Engine::WindowIdentifier windowIdentifier{
+        static_cast<std::uint32_t>(platformEvent.window.windowID)};
+
+    switch (platformEvent.type)
+    {
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+        return Engine::WindowCloseRequested{windowIdentifier};
+
+    case SDL_EVENT_WINDOW_MOVED:
+        return Engine::WindowMoved{
+            windowIdentifier,
+            Engine::WindowPosition{platformEvent.window.data1, platformEvent.window.data2}};
+
+    case SDL_EVENT_WINDOW_RESIZED:
+        return Engine::WindowSizeChanged{
+            windowIdentifier,
+            Engine::WindowSize{static_cast<std::uint32_t>(platformEvent.window.data1),
+                               static_cast<std::uint32_t>(platformEvent.window.data2)}};
+
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        return Engine::GraphicsSurfaceSizeChanged{
+            windowIdentifier,
+            Engine::GraphicsSurfaceSize{static_cast<std::uint32_t>(platformEvent.window.data1),
+                                        static_cast<std::uint32_t>(platformEvent.window.data2)}};
+
+    case SDL_EVENT_WINDOW_FOCUS_GAINED:
+        return Engine::WindowFocusGained{windowIdentifier};
+
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+        return Engine::WindowFocusLost{windowIdentifier};
+
+    case SDL_EVENT_WINDOW_MINIMIZED:
+        return Engine::WindowMinimized{windowIdentifier};
+
+    case SDL_EVENT_WINDOW_RESTORED:
+        return Engine::WindowRestored{windowIdentifier};
+
+    case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+        return Engine::WindowDisplayScaleChanged{windowIdentifier,
+                                                 SDL_GetWindowDisplayScale(platformWindow)};
+    default:
+        return std::nullopt;
+    }
+}
+
 } // namespace
 
 namespace Engine
@@ -166,21 +218,26 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
             continue;
         }
 
-        if (event.type != SDL_EVENT_WINDOW_CLOSE_REQUESTED)
+        if (event.type < SDL_EVENT_WINDOW_FIRST || event.type > SDL_EVENT_WINDOW_LAST)
         {
             continue;
         }
 
-        std::uint32_t windowIdentifier = static_cast<std::uint32_t>(event.window.windowID);
+        auto windowIterator = implementation->windowByIdentifier.find(
+            static_cast<std::uint32_t>(event.window.windowID));
 
-        if (!implementation->windowByIdentifier.contains(windowIdentifier))
+        if (windowIterator == implementation->windowByIdentifier.end())
         {
-            // SDL can report close events for windows not owned by this Window System instance.
             continue;
         }
 
-        pollResult.windowEvents.push_back(
-            WindowCloseRequested{.windowIdentifier = WindowIdentifier{windowIdentifier}});
+        std::optional<WindowEvent> windowEvent =
+            translateManagedWindowEvent(event, windowIterator->second);
+
+        if (windowEvent.has_value())
+        {
+            pollResult.windowEvents.push_back(*windowEvent);
+        }
     }
 
     return pollResult;

@@ -43,6 +43,13 @@ struct WindowIdentifier
 {
     /// @brief Engine-owned identifier value assigned by the Window System.
     std::uint32_t value = 0;
+
+    /// @brief Compares two window identifiers by their engine-owned values.
+    /// @param left First window identifier to compare.
+    /// @param right Second window identifier to compare.
+    /// @return True when both identifiers refer to the same engine-owned window.
+    [[nodiscard]] friend constexpr bool operator==(WindowIdentifier const &left,
+                                                  WindowIdentifier const &right) noexcept = default;
 };
 
 /// @brief Engine-owned configuration used to create a window.
@@ -196,10 +203,11 @@ public:
     /// @throws std::invalid_argument if the configured width or height is not greater than zero.
     WindowIdentifier createPrimaryWindow(WindowConfiguration const &configuration);
 
-    /// @brief Polls pending platform events and returns engine-owned window results.
+    /// @brief Drains pending platform events and returns engine-owned window results.
     /// @return Window event batch plus application-level quit state.
-    /// @details If the Window System is not initialized, this returns an empty result. Events for
-    ///          unmanaged windows are ignored.
+    /// @details If the Window System is not initialized, this returns an empty result without
+    ///          polling SDL. Supported events for managed windows are translated into engine-owned
+    ///          event payloads; unmanaged or unsupported events are ignored.
     WindowEventPollResult pollWindowEvents();
 
 private:
