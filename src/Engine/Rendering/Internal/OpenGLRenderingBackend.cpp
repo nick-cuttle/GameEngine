@@ -19,11 +19,6 @@
 namespace
 {
 
-/// @brief OpenGL major version requested for the first renderer path.
-constexpr int openGLMajorVersion = 4;
-/// @brief OpenGL minor version requested for the first renderer path.
-constexpr int openGLMinorVersion = 6;
-
 /// @brief Converts a presentation mode to the SDL swap interval value.
 /// @param presentationMode Engine-owned presentation mode.
 /// @return SDL swap interval value matching the requested presentation timing.
@@ -46,18 +41,6 @@ int swapIntervalForPresentationMode(Engine::PresentationMode presentationMode)
 std::runtime_error platformError(std::string_view operationDescription)
 {
     return std::runtime_error(std::string(operationDescription) + ": " + SDL_GetError());
-}
-
-/// @brief Sets an OpenGL context attribute before creating the context.
-/// @param attribute SDL OpenGL attribute to set.
-/// @param value Value assigned to the attribute.
-/// @param operationDescription Description used if SDL rejects the attribute.
-void setOpenGLAttribute(SDL_GLAttr attribute, int value, std::string_view operationDescription)
-{
-    if (!SDL_GL_SetAttribute(attribute, value))
-    {
-        throw platformError(operationDescription);
-    }
 }
 
 /// @brief Loads one OpenGL procedure through SDL for GLAD.
@@ -120,14 +103,6 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
     {
         throw std::runtime_error("Renderer already has an attached Graphics Surface.");
     }
-
-    setOpenGLAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, openGLMajorVersion,
-                       "Failed to set OpenGL major version");
-    setOpenGLAttribute(SDL_GL_CONTEXT_MINOR_VERSION, openGLMinorVersion,
-                       "Failed to set OpenGL minor version");
-    setOpenGLAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE,
-                       "Failed to set OpenGL core profile");
-    setOpenGLAttribute(SDL_GL_DOUBLEBUFFER, 1, "Failed to enable OpenGL double buffering");
 
     implementation->graphicsSurface =
         GraphicsSurfaceFactory::createOpenGLGraphicsSurface(windowSystem, windowIdentifier);

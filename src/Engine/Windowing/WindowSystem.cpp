@@ -27,6 +27,43 @@ constexpr std::uint32_t maximumPlatformWindowDimension =
 
 /// @brief Maximum bytes reserved for SDL event descriptions used in trace logging.
 constexpr int platformEventDescriptionBufferSize = 256;
+/// @brief OpenGL major version requested for engine renderer windows.
+constexpr int openGLMajorVersion = 4;
+/// @brief OpenGL minor version requested for engine renderer windows.
+constexpr int openGLMinorVersion = 6;
+
+/// @brief Converts an SDL error into a runtime exception with operation context.
+/// @param operationDescription Description of the failed SDL operation.
+/// @return Runtime exception containing the SDL error text.
+std::runtime_error platformError(char const *operationDescription)
+{
+    return std::runtime_error(std::string(operationDescription) + ": " + SDL_GetError());
+}
+
+/// @brief Sets an OpenGL window attribute before SDL chooses the window visual.
+/// @param attribute SDL OpenGL attribute to set.
+/// @param value Value assigned to the attribute.
+/// @param operationDescription Description used if SDL rejects the attribute.
+void setOpenGLWindowAttribute(SDL_GLAttr attribute, int value, char const *operationDescription)
+{
+    if (!SDL_GL_SetAttribute(attribute, value))
+    {
+        throw platformError(operationDescription);
+    }
+}
+
+/// @brief Configures the OpenGL context attributes required by renderer-capable windows.
+/// @throws std::runtime_error if SDL rejects an OpenGL attribute.
+void configureOpenGLWindowAttributes()
+{
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, openGLMajorVersion,
+                             "Failed to set OpenGL major version");
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_MINOR_VERSION, openGLMinorVersion,
+                             "Failed to set OpenGL minor version");
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE,
+                             "Failed to set OpenGL core profile");
+    setOpenGLWindowAttribute(SDL_GL_DOUBLEBUFFER, 1, "Failed to enable OpenGL double buffering");
+}
 
 /// @brief Formats an SDL event description for trace logging.
 /// @param platformEvent SDL event to describe.
@@ -202,6 +239,7 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 
     if (configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::OpenGL)
     {
+        configureOpenGLWindowAttributes();
         windowFlags |= SDL_WINDOW_OPENGL;
     }
 
