@@ -5,6 +5,7 @@
  * Handles initialization and main loop execution.
  */
 
+#include <Engine/Rendering/Renderer.hpp>
 #include <Engine/Runtime/Context.hpp>
 #include <Engine/Windowing/WindowSystem.hpp>
 
@@ -22,8 +23,21 @@ int main()
     auto windowLogger = engine.loggingSystem.createSubsystemLogger("WindowSystem");
     windowSystem.initialize(windowLogger);
 
-    Engine::WindowIdentifier primaryWindow =
-        windowSystem.createPrimaryWindow(Engine::WindowConfiguration{});
+    Engine::WindowConfiguration windowConfiguration;
+    windowConfiguration.graphicsSurfaceCapability = Engine::GraphicsSurfaceCapability::OpenGL;
+
+    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(windowConfiguration);
+
+    Engine::Renderer renderer;
+    Engine::RendererConfiguration rendererConfiguration;
+    rendererConfiguration.renderingBackendSelection = Engine::RenderingBackendSelection::OpenGL;
+    rendererConfiguration.presentationMode = Engine::PresentationMode::VerticalSynchronization;
+
+    auto rendererLogger = engine.loggingSystem.createSubsystemLogger("Renderer");
+    renderer.initialize(rendererConfiguration, rendererLogger);
+    renderer.attachGraphicsSurface(windowSystem, primaryWindow);
+
+    Engine::LinearColor clearColor{.red = 0.02F, .green = 0.05F, .blue = 0.09F, .alpha = 1.0F};
 
     bool isRunning = true;
 
@@ -49,8 +63,16 @@ int main()
                 isRunning = false;
             }
         }
+
+        if (isRunning)
+        {
+            renderer.beginFrame();
+            renderer.clear(clearColor);
+            renderer.present();
+        }
     }
 
+    renderer.shutdown();
     windowSystem.shutdown();
     engine.loggingSystem.shutdown();
 

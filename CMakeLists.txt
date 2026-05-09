@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(GameEngine LANGUAGES CXX)
+project(GameEngine LANGUAGES C CXX)
 
 option(ENGINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(BUILD_TESTS "Build engine tests" ON)

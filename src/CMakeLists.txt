@@ -6,11 +6,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/Dependencies.cmake)
 engine_find_or_fetch_sdl3()
 engine_find_or_fetch_fmt()
 engine_find_or_fetch_spdlog()
+engine_find_or_fetch_glad_gl_core()
 
 set(ENGINE_SOURCES
     Engine/Core/Paths.cpp
     Engine/Core/Logger.cpp
     Engine/Input/InputSystem.cpp
+    Engine/Rendering/Internal/OpenGLRenderingBackend.cpp
+    Engine/Rendering/Renderer.cpp
     Engine/Runtime/Context.cpp
     Engine/Windowing/WindowSystem.cpp
 )
@@ -21,8 +24,16 @@ target_include_directories(Engine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# fmt is part of the public Logger formatting API; spdlog remains hidden in Logger.cpp.
-target_link_libraries(Engine PUBLIC fmt::fmt PRIVATE spdlog::spdlog)
+# fmt is part of the public Logger formatting API; implementation dependencies stay private.
+target_link_libraries(Engine
+    PUBLIC
+        fmt::fmt
+    PRIVATE
+        glad_gl_core_46
+        OpenGL::GL
+        SDL3::SDL3
+        spdlog::spdlog
+)
 
 if(MSVC)
     target_compile_options(Engine PRIVATE /W4)
@@ -35,7 +46,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(Engine PRIVATE -Werror)
     endif()
 endif()
-target_link_libraries(Engine PRIVATE SDL3::SDL3)
 
 add_executable(GameEngine main.cpp)
 

@@ -16,6 +16,11 @@
 namespace Engine
 {
 
+namespace Rendering::Internal
+{
+class GraphicsSurfaceFactory;
+}
+
 /// @brief Logical dimensions of an engine-owned window.
 /// @details Values are desktop-coordinate dimensions used when asking the platform backend to
 ///          create a window. Window creation rejects zero dimensions and dimensions that exceed
@@ -53,6 +58,17 @@ struct WindowIdentifier
     operator==(WindowIdentifier const &left, WindowIdentifier const &right) noexcept = default;
 };
 
+/// @brief Rendering attachment capability requested for a newly created window.
+/// @details The capability is stored as an engine-owned concept so callers do not need to know the
+///          platform window flags required by a concrete rendering backend.
+enum class GraphicsSurfaceCapability
+{
+    /// @brief The window does not need a renderer-facing graphics surface.
+    None,
+    /// @brief The window must support an OpenGL graphics surface attachment.
+    OpenGL
+};
+
 /// @brief Engine-owned configuration used to create a window.
 /// @details This configuration is consumed by WindowSystem::createPrimaryWindow and describes the
 ///          initial platform window state requested by the engine.
@@ -64,6 +80,8 @@ struct WindowConfiguration
     WindowSize size{};
     /// @brief Whether the window should be visible immediately after creation.
     bool isVisible = true;
+    /// @brief Renderer-facing graphics surface capability requested for this window.
+    GraphicsSurfaceCapability graphicsSurfaceCapability = GraphicsSurfaceCapability::None;
 };
 
 /// @brief Logical position of an engine-owned window.
@@ -213,6 +231,8 @@ public:
     WindowEventPollResult pollWindowEvents();
 
 private:
+    friend class Rendering::Internal::GraphicsSurfaceFactory;
+
     /// @brief SDL-specific implementation hidden from consumers of this public header.
     struct Implementation;
     /// @brief Owning pointer to the platform-specific implementation state.

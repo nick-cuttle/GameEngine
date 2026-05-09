@@ -16,6 +16,8 @@ systems.
   engine-owned `Logger` handles.
 - `src/Engine/Runtime` contains `Context`, the startup composition point for engine-wide paths and
   logging.
+- `src/Engine/Rendering` contains `Renderer`, the backend-neutral rendering facade, plus private
+  Rendering Backend implementations and the internal Graphics Surface Factory bridge.
 - `src/Engine/Windowing` contains `WindowSystem`, the SDL boundary for video initialization,
   primary-window creation, shutdown, and translation from SDL window events to engine-owned
   `WindowEvent` payloads.
@@ -35,8 +37,16 @@ systems.
 
 **Startup**:
 `main()` creates `Engine::Context`, which initializes `Paths` first and then initializes
-`LoggingSystem` with the resolved logs directory. `main()` creates a `WindowSystem` subsystem
-logger, initializes the Window System, creates the Primary Window, and enters the Runtime Loop.
+`LoggingSystem` with the resolved logs directory. `main()` creates subsystem loggers, initializes
+the Window System, creates the Primary Window with an OpenGL Graphics Surface Capability,
+initializes the Renderer with an explicit Rendering Backend and Presentation Mode, attaches the
+Primary Window through the internal Graphics Surface Factory, and enters the Runtime Loop.
+
+**First frame rendering**:
+Application code drives rendering through the concrete `Renderer` facade. The OpenGL Rendering
+Backend privately creates the graphics context, loads GLAD, clears a `LinearColor`, and presents
+the Primary Window. Vulkan can be selected in `RendererConfiguration`, but it fails clearly as not
+implemented and does not add a Vulkan build dependency.
 
 **Window event polling**:
 `WindowSystem::pollWindowEvents()` drains the SDL event queue. Application quit requests are

@@ -5,10 +5,14 @@
 
 #include "WindowSystem.hpp"
 
+#include <Engine/Rendering/Internal/GraphicsSurfaceFactory.hpp>
+
 #include <SDL3/SDL.h>
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -189,7 +193,17 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
     int const platformWindowWidth = static_cast<int>(configuration.size.width);
     int const platformWindowHeight = static_cast<int>(configuration.size.height);
 
-    SDL_WindowFlags windowFlags = configuration.isVisible ? 0 : SDL_WINDOW_HIDDEN;
+    SDL_WindowFlags windowFlags = 0;
+
+    if (!configuration.isVisible)
+    {
+        windowFlags |= SDL_WINDOW_HIDDEN;
+    }
+
+    if (configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::OpenGL)
+    {
+        windowFlags |= SDL_WINDOW_OPENGL;
+    }
 
     SDL_Window *window = SDL_CreateWindow(configuration.title.c_str(), platformWindowWidth,
                                           platformWindowHeight, windowFlags);
@@ -210,7 +224,11 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 
     WindowIdentifier returnedWindowIdentifier{static_cast<std::uint32_t>(windowIdentifier)};
 
-    if (configuration.isVisible)
+    bool const shouldPresentInitialVisibilityBuffer =
+        configuration.isVisible &&
+        configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::None;
+
+    if (shouldPresentInitialVisibilityBuffer)
     {
         try
         {
@@ -260,8 +278,7 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
             {
                 std::string const eventDescription = describePlatformEvent(event);
 
-                m_Logger.trace("Non-window event captured: {} ({})", eventDescription,
-                               eventType);
+                m_Logger.trace("Non-window event captured: {} ({})", eventDescription, eventType);
             }
 
             continue;
@@ -288,6 +305,45 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
 
     return pollResult;
 }
+
+namespace Rendering::Internal
+{
+
+PlatformGraphicsSurface
+GraphicsSurfaceFactory::createOpenGLGraphicsSurface(WindowSystem &windowSystem,
+                                                    WindowIdentifier windowIdentifier)
+{
+    if (!windowSystem.implementation->isInitialized)
+    {
+        throw std::runtime_error(
+            "WindowSystem must be initialized before creating Graphics Surfaces.");
+    }
+
+    auto windowIterator =
+        windowSystem.implementation->windowByIdentifier.find(windowIdentifier.value);
+
+    if (windowIterator == windowSystem.implementation->windowByIdentifier.end())
+    {
+        throw std::invalid_argument(
+            "Cannot create a Graphics Surface for an unknown Window Identifier.");
+    }
+
+    int graphicsSurfaceWidth = 0;
+    int graphicsSurfaceHeight = 0;
+
+    if (!SDL_GetWindowSizeInPixels(windowIterator->second, &graphicsSurfaceWidth,
+                                   &graphicsSurfaceHeight))
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    return PlatformGraphicsSurface{
+        windowIterator->second,
+        GraphicsSurfaceSize{static_cast<std::uint32_t>(std::max(graphicsSurfaceWidth, 0)),
+                            static_cast<std::uint32_t>(std::max(graphicsSurfaceHeight, 0))}};
+}
+
+} // namespace Rendering::Internal
 
 void WindowSystem::releaseResources() noexcept
 {

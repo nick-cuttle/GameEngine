@@ -85,6 +85,22 @@ function(engine_find_or_fetch_spdlog)
     engine_require_dependency("spdlog" "spdlog::spdlog")
 endfunction()
 
+function(engine_find_or_fetch_glad_gl_core)
+    if(NOT TARGET glad_gl_core_46 AND ENGINE_FETCH_DEPENDENCIES)
+        FetchContent_Declare(
+            glad
+            GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+            GIT_TAG v2.0.8
+            SOURCE_SUBDIR cmake
+        )
+        FetchContent_MakeAvailable(glad)
+        glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE API gl:core=4.6)
+    endif()
+
+    engine_require_dependency("glad" "glad_gl_core_46")
+    find_package(OpenGL REQUIRED)
+endfunction()
+
 function(engine_find_or_fetch_catch2)
     find_package(Catch2 3 CONFIG QUIET)
 
