@@ -92,7 +92,7 @@ run_coverage() {
     # untouched.
     EXTRA_CMAKE_ARGS="-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage -DBUILD_TESTS=ON"
 
-    printf "%s==> Configuring %s coverage build (%s)%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$BUILD_TYPE" "$COLOR_RESET"
+    print_status "$COLOR_BLUE" "Configuring $BUILD_DIR coverage build ($BUILD_TYPE)"
     if ! configure_build "$BUILD_DIR" "$BUILD_TYPE" "$CONFIGURE_LOG" "$EXTRA_CMAKE_ARGS"; then
         print_status "$COLOR_RED" "CMake configuration failed for $BUILD_DIR. Check the log for details: $CONFIGURE_LOG"
         exit 1
@@ -101,7 +101,7 @@ run_coverage() {
     # Remove old counters after building and before running tests so gcovr reports only this run.
     find "$BUILD_DIR" -name '*.gcda' -delete
 
-    printf "%s==> Running %s coverage tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
+    print_status "$COLOR_BLUE" "Running $BUILD_DIR coverage tests"
     # Delegate CTest flags and test-target rebuilding to the normal test workflow.
     run_eztest "$BUILD_DIR" "$TEST_PATTERN" "$LABEL"
 
@@ -117,7 +117,7 @@ fi
 
 mkdir -p "$COVERAGE_DIR"
 
-printf "%s==> Generating coverage reports%s\n" "$COLOR_BLUE" "$COLOR_RESET"
+print_status "$COLOR_BLUE" "Generating coverage reports"
 # shellcheck disable=SC2086
 gcovr \
     --root . \
@@ -128,7 +128,7 @@ gcovr \
     --html-details "$COVERAGE_DIR/index.html" \
     --cobertura "$COVERAGE_DIR/coverage.xml"
 
-printf "%s==> Coverage report written to %s/index.html%s\n" "$COLOR_GREEN" "$COVERAGE_DIR" "$COLOR_RESET"
+print_status "$COLOR_GREEN" "Coverage report written to $COVERAGE_DIR/index.html"
 
 if [ "$OPEN_REPORT" -eq 1 ]; then
     if command -v xdg-open >/dev/null 2>&1; then

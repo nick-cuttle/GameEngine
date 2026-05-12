@@ -5,8 +5,10 @@ set -e
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 # The script can run either from scripts/build or through a generated scripts/scripts shim.
 if [ -f "$SCRIPT_DIR/buildHelper.sh" ]; then
+    BUILD_HELPER_PATH="$SCRIPT_DIR/buildHelper.sh"
     . "$SCRIPT_DIR/buildHelper.sh"
 else
+    BUILD_HELPER_PATH="$SCRIPT_DIR/../build/buildHelper.sh"
     . "$SCRIPT_DIR/../build/buildHelper.sh"
 fi
 

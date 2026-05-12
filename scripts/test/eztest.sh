@@ -2,15 +2,18 @@
 
 set -e
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/../printHelper.sh" ]; then
+    . "$SCRIPT_DIR/../printHelper.sh"
+else
+    . "$SCRIPT_DIR/printHelper.sh"
+fi
+
 BUILD_DIR=""
 TEST_PATTERN=""
 LABEL=""
 LIST_TESTS=0
-COLOR_RESET="$(printf '\033[0m')"
-COLOR_BLUE="$(printf '\033[1;34m')"
-COLOR_GREEN="$(printf '\033[1;32m')"
 
-export CLICOLOR_FORCE=1
 export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
@@ -77,16 +80,16 @@ run_tests() {
         exit 1
     fi
 
-    printf "%s==> Building %s unit tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
+    print_status "$COLOR_BLUE" "Building $BUILD_DIR unit tests"
     cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j$(nproc || echo 8)
 
     if [ "$LIST_TESTS" -eq 1 ]; then
-        printf "%s==> Listing %s tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
+        print_status "$COLOR_BLUE" "Listing $BUILD_DIR tests"
         ctest --test-dir "$BUILD_DIR" -N
         return
     fi
 
-    printf "%s==> Running %s tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
+    print_status "$COLOR_BLUE" "Running $BUILD_DIR tests"
 
     if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
         ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
@@ -98,7 +101,7 @@ run_tests() {
         ctest --test-dir "$BUILD_DIR" --output-on-failure
     fi
 
-    printf "%s==> %s tests passed%s\n" "$COLOR_GREEN" "$BUILD_DIR" "$COLOR_RESET"
+    print_status "$COLOR_GREEN" "$BUILD_DIR tests passed"
 }
 
 if [ -n "$BUILD_DIR" ]; then
