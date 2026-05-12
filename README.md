@@ -21,13 +21,14 @@ commands directly.
 
 ## Building
 
-The helper script configures and builds under `build/<build_type>`:
+The helper script configures and builds into the provided build directory:
 
 ```bash
-./scripts/ezbuild.sh <build_type>
+./scripts/ezbuild.sh build/Debug
 ```
 
-`build_type` can be `Debug`, `Release`, or omitted to build both configurations.
+The CMake build type is inferred from the final directory name. With no build directory, the
+script builds both `build/Debug` and `build/Release`.
 
 Equivalent direct CMake commands:
 
@@ -65,23 +66,23 @@ After building, run the executable from the chosen configuration:
 ./build/Debug/bin/GameEngine
 ```
 
-On MinGW-style Windows builds, the executable name is usually `GameEngine.exe`. The
-`scripts/ezrun.sh` helper currently expects that `.exe` name.
+The `scripts/ezrun.sh` helper defaults to `build/Release` and accepts a build directory argument.
+It checks for both `GameEngine` and `GameEngine.exe`.
 
 ## Testing
 
 Build first, then run unit tests with:
 
 ```bash
-./scripts/eztest.sh Debug
+./scripts/eztest.sh build/Debug
 ```
 
-With no build type, `eztest.sh` runs `Debug` and then `Release`. Useful filters:
+With no build directory, `eztest.sh` runs `build/Debug` and then `build/Release`. Useful filters:
 
 ```bash
-./scripts/eztest.sh Debug --list
-./scripts/eztest.sh Debug --label unit
-./scripts/eztest.sh Debug --test WindowSystem
+./scripts/eztest.sh build/Debug --list
+./scripts/eztest.sh build/Debug --label unit
+./scripts/eztest.sh build/Debug --test WindowSystem
 ```
 
 CTest discovers the Catch2 test cases from `EngineUnitTests`. Current unit tests cover:
@@ -103,7 +104,7 @@ Format C++ source and headers:
 Generate coverage reports with GCC coverage instrumentation:
 
 ```bash
-./scripts/ezcoverage.sh Debug
+./scripts/ezcoverage.sh build/Coverage/Debug
 ```
 
 Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.

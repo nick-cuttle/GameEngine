@@ -2,7 +2,7 @@
 
 set -e
 
-BUILD_TYPE=""
+BUILD_DIR=""
 COVERAGE_BUILD_ROOT="build/Coverage"
 COVERAGE_DIR="coverage"
 TEST_PATTERN=""
@@ -16,8 +16,10 @@ export CLICOLOR_FORCE=1
 export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
-    echo "Usage: ./scripts/ezcoverage.sh [Debug|Release] [options]"
-    echo "With no build type, runs Debug first, then Release, and combines the report."
+    echo "Usage: ./scripts/ezcoverage.sh [build-dir] [options]"
+    echo "Example: ./scripts/ezcoverage.sh build/Coverage/Debug"
+    echo "With no build directory, runs build/Coverage/Debug first, then build/Coverage/Release, and combines the report."
+    echo "The CMake build type is inferred from the build directory name."
     echo ""
     echo "Builds the tests with GCC coverage instrumentation, runs them with CTest,"
     echo "and generates text plus HTML coverage reports with gcovr."
@@ -31,10 +33,6 @@ usage() {
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        Debug|Release)
-            BUILD_TYPE="$1"
-            shift
-            ;;
         --test)
             if [ -z "$2" ]; then
                 echo "Error: --test requires a regex"
@@ -59,10 +57,19 @@ while [ "$#" -gt 0 ]; do
             usage
             exit 0
             ;;
-        *)
+        -*)
             echo "Unsupported option: $1"
             usage
             exit 1
+            ;;
+        *)
+            if [ -n "$BUILD_DIR" ]; then
+                echo "Unsupported argument: $1"
+                usage
+                exit 1
+            fi
+            BUILD_DIR="$1"
+            shift
             ;;
     esac
 done
@@ -86,10 +93,16 @@ JOBS="$(nproc 2>/dev/null || echo 8)"
 GCOVR_OBJECT_ARGS=""
 
 run_coverage() {
-    BUILD_TYPE="$1"
-    BUILD_DIR="$COVERAGE_BUILD_ROOT/$BUILD_TYPE"
+    BUILD_DIR="$1"
+    BUILD_TYPE=${BUILD_DIR%/}
+    BUILD_TYPE=${BUILD_TYPE##*/}
 
-    printf "%s==> Configuring %s coverage build%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+    if [ -z "$BUILD_TYPE" ]; then
+        echo "Invalid build directory: $BUILD_DIR"
+        exit 1
+    fi
+
+    printf "%s==> Configuring %s coverage build (%s)%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$BUILD_TYPE" "$COLOR_RESET"
     cmake \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
@@ -101,12 +114,12 @@ run_coverage() {
         -S . \
         -B "$BUILD_DIR"
 
-    printf "%s==> Building %s coverage unit tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+    printf "%s==> Building %s coverage unit tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
     cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j"$JOBS"
 
     find "$BUILD_DIR" -name '*.gcda' -delete
 
-    printf "%s==> Running %s coverage tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
+    printf "%s==> Running %s coverage tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
     if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
         ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
     elif [ -n "$TEST_PATTERN" ]; then
@@ -120,11 +133,11 @@ run_coverage() {
     GCOVR_OBJECT_ARGS="$GCOVR_OBJECT_ARGS --object-directory $BUILD_DIR"
 }
 
-if [ -n "$BUILD_TYPE" ]; then
-    run_coverage "$BUILD_TYPE"
+if [ -n "$BUILD_DIR" ]; then
+    run_coverage "$BUILD_DIR"
 else
-    run_coverage Debug
-    run_coverage Release
+    run_coverage "$COVERAGE_BUILD_ROOT/Debug"
+    run_coverage "$COVERAGE_BUILD_ROOT/Release"
 fi
 
 mkdir -p "$COVERAGE_DIR"

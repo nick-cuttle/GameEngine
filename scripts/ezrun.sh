@@ -1,26 +1,28 @@
 #!/usr/bin/env sh
 
-# Default version is Release unless a parameter is provided
-VERSION="${1:-Release}"
+# Default build directory is build/Release unless a parameter is provided
+BASE_DIR="${1:-build/Release}"
 
-EXE_NAME="GameEngine.exe"
-BASE_DIR="build/$VERSION"
 BIN_DIR="$BASE_DIR/bin"
-EXECUTABLE="$BIN_DIR/$EXE_NAME"
+EXECUTABLE="$BIN_DIR/GameEngine"
 
-# Validate version directory exists
+if [ ! -f "$EXECUTABLE" ]; then
+    EXECUTABLE="$BIN_DIR/GameEngine.exe"
+fi
+
+# Validate build directory exists
 if [ ! -d "$BASE_DIR" ]; then
-    echo "Error: build configuration '$VERSION' does not exist at $BASE_DIR"
-    echo "Available options: Release, Debug (or any other built configs)"
+    echo "Error: build directory does not exist: $BASE_DIR"
+    echo "Run ./scripts/ezbuild.sh $BASE_DIR first"
     exit 1
 fi
 
-# Check executable exists
 if [ -f "$EXECUTABLE" ]; then
-    echo "Running $VERSION build..."
+    echo "Running build from $BASE_DIR..."
     echo "Executable: $EXECUTABLE"
     "$EXECUTABLE"
 else
-    echo "Error: executable not found: $EXECUTABLE"
+    echo "Error: executable not found in $BIN_DIR"
+    echo "Expected GameEngine or GameEngine.exe"
     exit 1
 fi

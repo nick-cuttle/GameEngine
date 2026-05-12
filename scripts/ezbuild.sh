@@ -2,7 +2,7 @@
 
 set -e
 
-build_type=$1
+build_dir_arg=$1
 COLOR_RESET="$(printf '\033[0m')"
 COLOR_BLUE="$(printf '\033[1;34m')"
 COLOR_GREEN="$(printf '\033[1;32m')"
@@ -12,8 +12,10 @@ COLOR_RED="$(printf '\033[1;31m')"
 export CLICOLOR_FORCE=1
 
 usage() {
-    echo "Usage: ./scripts/ezbuild.sh [Debug|Release]"
-    echo "With no build type, builds Debug and Release."
+    echo "Usage: ./scripts/ezbuild.sh [build-dir]"
+    echo "Example: ./scripts/ezbuild.sh build/Debug"
+    echo "With no build directory, builds build/Debug and build/Release."
+    echo "The CMake build type is inferred from the build directory name."
     echo ""
     echo "Environment:"
     echo "  VCPKG_ROOT                 Enables vcpkg manifest mode when set."
@@ -23,7 +25,7 @@ usage() {
     echo "  ENGINE_CMAKE_GENERATOR     Overrides the selected CMake generator."
 }
 
-case "$build_type" in
+case "$build_dir_arg" in
     --help|-h)
         usage
         exit 0
@@ -118,24 +120,66 @@ summarize_vcpkg_dependencies() {
     done
 }
 
+is_mingw_vcpkg_build() {
+    configure_log=$1
+
+    {
+        echo "$VCPKG_TARGET_TRIPLET $VCPKG_HOST_TRIPLET"
+        [ -f "$configure_log" ] && grep -i mingw "$configure_log"
+    } | grep -i mingw >/dev/null
+}
+
+print_configure_log() {
+    configure_log=$1
+
+    if is_mingw_vcpkg_build "$configure_log"; then
+        awk -v blue="$COLOR_BLUE" -v reset="$COLOR_RESET" '
+            /^-- Running vcpkg install$/ {
+                print blue "-- Running vcpkg install (details in configure log)" reset
+                in_vcpkg = 1
+                next
+            }
+            /^-- Running vcpkg install - done$/ {
+                print blue $0 reset
+                in_vcpkg = 0
+                next
+            }
+            !in_vcpkg {
+                print blue $0 reset
+            }
+        ' "$configure_log"
+    else
+        awk -v blue="$COLOR_BLUE" -v reset="$COLOR_RESET" '{ print blue $0 reset }' "$configure_log"
+    fi
+}
+
 build() {
-    type=$1
-    print_status "$COLOR_BLUE" "Configuring $type"
+    build_dir=$1
+    type=${build_dir%/}
+    type=${type##*/}
+
+    if [ -z "$type" ]; then
+        echo "Invalid build directory: $build_dir"
+        exit 1
+    fi
+
+    print_status "$COLOR_BLUE" "Configuring $build_dir ($type)"
     print_status "$COLOR_BLUE" "Using CMake generator: $generator"
 
-    build_dir="build/$type"
     configure_log="$build_dir/ezbuild-configure.log"
     mkdir -p "$build_dir"
 
     # cmake_args intentionally remains word-split so each -D option is passed separately.
     # shellcheck disable=SC2086
-    if ! cmake -G "$generator" -S . -B "$build_dir" -DCMAKE_BUILD_TYPE="$type" $cmake_args 2>&1 | tee "$configure_log"; then
-        print_status "$COLOR_RED" "CMake configuration failed for $type. Check the log for details: $configure_log"
+    if ! cmake -G "$generator" -S . -B "$build_dir" -DCMAKE_BUILD_TYPE="$type" $cmake_args >"$configure_log" 2>&1; then
+        cat "$configure_log"
+        print_status "$COLOR_RED" "CMake configuration failed for $build_dir. Check the log for details: $configure_log"
         exit 1
     fi
+    print_configure_log "$configure_log"
 
     summarize_vcpkg_dependencies "$configure_log"
-    print_status "$COLOR_BLUE" "Building $type"
+    print_status "$COLOR_BLUE" "Building $build_dir"
 
     if [ "$generator" = "Ninja" ]; then
         cmake --build "$build_dir"
@@ -143,23 +187,16 @@ build() {
         cmake --build "$build_dir" -- -j"$(nproc || echo 8)"
     fi
 
-    print_status "$COLOR_GREEN" "$type build passed"
+    print_status "$COLOR_GREEN" "$build_dir build passed"
 }
 
 # Run builds
-case "$build_type" in
-    Debug)
-        build Debug
-        ;;
-    Release)
-        build Release
-        ;;
+case "$build_dir_arg" in
     "")
-        build Debug
-        build Release
+        build build/Debug
+        build build/Release
         ;;
     *)
-        echo "Unsupported build type, must be Debug, Release, or blank"
-        exit 1
+        build "$build_dir_arg"
         ;;
 esac
