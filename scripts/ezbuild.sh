@@ -100,8 +100,8 @@ fi
 summarize_vcpkg_dependencies() {
     configure_log=$1
 
-    [ "$using_vcpkg" -eq 1 ] || return
-    [ -f "$configure_log" ] || return
+    [ "$using_vcpkg" -eq 1 ] || return 0
+    [ -f "$configure_log" ] || return 0
 
     for dependency in catch2 fmt sdl3 spdlog; do
         if grep -E "Restored .* package\(s\)" "$configure_log" >/dev/null &&
