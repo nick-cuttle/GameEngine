@@ -80,6 +80,8 @@ struct WindowConfiguration
     WindowSize size{};
     /// @brief Whether the window should be visible immediately after creation.
     bool isVisible = true;
+    /// @brief Whether the desktop environment may resize the window interactively.
+    bool isResizable = false;
     /// @brief Renderer-facing graphics surface capability requested for this window.
     GraphicsSurfaceCapability graphicsSurfaceCapability = GraphicsSurfaceCapability::None;
 };

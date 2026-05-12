@@ -102,6 +102,7 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         REQUIRE(configuration.size.width == 1280);
         REQUIRE(configuration.size.height == 720);
         REQUIRE(configuration.isVisible);
+        REQUIRE_FALSE(configuration.isResizable);
         REQUIRE(configuration.graphicsSurfaceCapability == Engine::GraphicsSurfaceCapability::None);
     }
 

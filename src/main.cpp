@@ -24,6 +24,7 @@ int main()
     windowSystem.initialize(windowLogger);
 
     Engine::WindowConfiguration windowConfiguration;
+    windowConfiguration.isResizable = true;
     windowConfiguration.graphicsSurfaceCapability = Engine::GraphicsSurfaceCapability::OpenGL;
 
     Engine::WindowIdentifier primaryWindow{windowSystem.createPrimaryWindow(windowConfiguration)};
@@ -54,12 +55,12 @@ int main()
         {
             renderer.handleWindowEvent(windowEvent);
 
-            Engine::WindowCloseRequested const *windowCloseRequestedEvent{std::get_if<Engine::WindowCloseRequested>(&windowEvent)};
+            Engine::WindowCloseRequested const *windowCloseRequestedEvent{
+                std::get_if<Engine::WindowCloseRequested>(&windowEvent)};
 
-            bool const isPrimaryWindowCloseRequested{
-                windowCloseRequestedEvent != nullptr &&
-                windowCloseRequestedEvent->windowIdentifier == primaryWindow
-            };
+            bool const isPrimaryWindowCloseRequested{windowCloseRequestedEvent != nullptr &&
+                                                     windowCloseRequestedEvent->windowIdentifier ==
+                                                         primaryWindow};
             if (isPrimaryWindowCloseRequested)
             {
                 isRunning = false;

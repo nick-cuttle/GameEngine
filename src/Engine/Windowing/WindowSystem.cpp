@@ -234,7 +234,14 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 
     if (!configuration.isVisible)
     {
+        // Hide the window initially; will be shown when the first frame is drawn.
         windowFlags |= SDL_WINDOW_HIDDEN;
+    }
+
+    if (configuration.isResizable)
+    {
+        // Allow the window to be resized interactively by the desktop environment.
+        windowFlags |= SDL_WINDOW_RESIZABLE;
     }
 
     if (configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::OpenGL)

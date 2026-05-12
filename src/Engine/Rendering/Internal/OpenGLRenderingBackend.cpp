@@ -163,7 +163,8 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
         throw platformError("Failed to set OpenGL Presentation Mode");
     }
 
-    // Initializes context, surface size, and viewport; drawability is handled by regular frame calls.
+    // Initializes context, surface size, and viewport; drawability is handled by regular frame
+    // calls.
     (void)beginFrame();
 
     logger.info("OpenGL 4.6 core Rendering Backend has been initialized.");
@@ -176,7 +177,8 @@ void OpenGLRenderingBackend::handleWindowEvent(WindowEvent const &windowEvent)
         return;
     }
 
-    GraphicsSurfaceSizeChanged const *graphicsSurfaceSizeChanged{std::get_if<GraphicsSurfaceSizeChanged>(&windowEvent)};
+    GraphicsSurfaceSizeChanged const *graphicsSurfaceSizeChanged{
+        std::get_if<GraphicsSurfaceSizeChanged>(&windowEvent)};
     if (graphicsSurfaceSizeChanged == nullptr ||
         graphicsSurfaceSizeChanged->windowIdentifier != implementation->windowIdentifier)
     {
