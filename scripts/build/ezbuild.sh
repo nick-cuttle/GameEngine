@@ -3,7 +3,8 @@
 set -e
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-# The script can run either from scripts/build or through a generated scripts/scripts shim.
+
+# call buildHelper.sh to get common build functions and variables
 if [ -f "$SCRIPT_DIR/buildHelper.sh" ]; then
     BUILD_HELPER_PATH="$SCRIPT_DIR/buildHelper.sh"
     . "$SCRIPT_DIR/buildHelper.sh"
@@ -31,23 +32,26 @@ esac
 init_build_helper
 
 build() {
+    # get build type from directory name, configure, then build
     build_dir=$1
     build_type=$(infer_build_type_from_dir "$build_dir") || exit 1
     configure_log="$build_dir/ezbuild-configure.log"
 
+    # Configure build
     print_status "$COLOR_BLUE" "Configuring $build_dir ($build_type)"
     if ! configure_build "$build_dir" "$build_type" "$configure_log" ""; then
         print_status "$COLOR_RED" "CMake configuration failed for $build_dir. Check the log for details: $configure_log"
         exit 1
     fi
 
+    # Build
     print_status "$COLOR_BLUE" "Building $build_dir"
     build_configured_dir "$build_dir" ""
     print_status "$COLOR_GREEN" "$build_dir build passed"
 }
 
 case "$build_dir_arg" in
-    "")
+    "")   # Default to both
         build build/Debug
         build build/Release
         ;;

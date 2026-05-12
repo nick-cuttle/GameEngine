@@ -31,6 +31,7 @@ usage() {
     echo "  --help            Show this help"
 }
 
+# Parse parameters
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --test)
@@ -74,6 +75,7 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
+# Check gcovr installed before doing any work
 if ! command -v gcovr >/dev/null 2>&1; then
     echo "Error: gcovr is required but was not found on PATH."
     echo "Install it with: python -m pip install gcovr"
@@ -85,13 +87,15 @@ init_build_helper
 GCOVR_OBJECT_ARGS=""
 
 run_coverage() {
+
+    # infer build type from directory name
     BUILD_DIR="$1"
     BUILD_TYPE=$(infer_build_type_from_dir "$BUILD_DIR") || exit 1
     CONFIGURE_LOG="$BUILD_DIR/ezcoverage-configure.log"
-    # Coverage instrumentation is local to this build directory; normal Debug/Release builds remain
-    # untouched.
+    # cmake flags
     EXTRA_CMAKE_ARGS="-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage -DBUILD_TESTS=ON"
 
+    # configure build
     print_status "$COLOR_BLUE" "Configuring $BUILD_DIR coverage build ($BUILD_TYPE)"
     if ! configure_build "$BUILD_DIR" "$BUILD_TYPE" "$CONFIGURE_LOG" "$EXTRA_CMAKE_ARGS"; then
         print_status "$COLOR_RED" "CMake configuration failed for $BUILD_DIR. Check the log for details: $CONFIGURE_LOG"
@@ -101,8 +105,8 @@ run_coverage() {
     # Remove old counters after building and before running tests so gcovr reports only this run.
     find "$BUILD_DIR" -name '*.gcda' -delete
 
+    # build and run tests
     print_status "$COLOR_BLUE" "Running $BUILD_DIR coverage tests"
-    # Delegate CTest flags and test-target rebuilding to the normal test workflow.
     run_eztest "$BUILD_DIR" "$TEST_PATTERN" "$LABEL"
 
     GCOVR_OBJECT_ARGS="$GCOVR_OBJECT_ARGS --object-directory $BUILD_DIR"
@@ -111,12 +115,14 @@ run_coverage() {
 if [ -n "$BUILD_DIR" ]; then
     run_coverage "$BUILD_DIR"
 else
+    # default to Debug and Release if build dir not specified.
     run_coverage "$COVERAGE_BUILD_ROOT/Debug"
     run_coverage "$COVERAGE_BUILD_ROOT/Release"
 fi
 
 mkdir -p "$COVERAGE_DIR"
 
+# Run report with gcovr
 print_status "$COLOR_BLUE" "Generating coverage reports"
 # shellcheck disable=SC2086
 gcovr \
@@ -130,6 +136,7 @@ gcovr \
 
 print_status "$COLOR_GREEN" "Coverage report written to $COVERAGE_DIR/index.html"
 
+# Open report
 if [ "$OPEN_REPORT" -eq 1 ]; then
     if command -v xdg-open >/dev/null 2>&1; then
         xdg-open "$COVERAGE_DIR/index.html"

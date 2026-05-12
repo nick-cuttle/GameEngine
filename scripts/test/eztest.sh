@@ -28,6 +28,7 @@ usage() {
     echo "  --help            Show this help"
 }
 
+# parse paremeters
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --test)
@@ -83,6 +84,7 @@ run_tests() {
     print_status "$COLOR_BLUE" "Building $BUILD_DIR unit tests"
     cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j$(nproc || echo 8)
 
+    # --list option
     if [ "$LIST_TESTS" -eq 1 ]; then
         print_status "$COLOR_BLUE" "Listing $BUILD_DIR tests"
         ctest --test-dir "$BUILD_DIR" -N
@@ -91,6 +93,7 @@ run_tests() {
 
     print_status "$COLOR_BLUE" "Running $BUILD_DIR tests"
 
+    # call correct ctest command based on options
     if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
         ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
     elif [ -n "$TEST_PATTERN" ]; then
@@ -104,6 +107,7 @@ run_tests() {
     print_status "$COLOR_GREEN" "$BUILD_DIR tests passed"
 }
 
+# select which types to build
 if [ -n "$BUILD_DIR" ]; then
     run_tests "$BUILD_DIR"
 else

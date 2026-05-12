@@ -15,8 +15,7 @@ else
   SCRIPT_PATH="$0"
 fi
 
-# Resolve the real scripts directory from the sourced file instead of the caller's working
-# directory; developers usually source this once from arbitrary shells.
+# Get directories from this script
 CORE_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)"
 SCRIPT_DIR="$(cd "$CORE_DIR/.." 2>/dev/null && pwd)"
 
@@ -25,6 +24,7 @@ if [ -z "$SCRIPT_DIR" ]; then
   return 1 2>/dev/null || exit 1
 fi
 
+# Make scripts directory
 COMMAND_DIR="$SCRIPT_DIR/scripts"
 if ! mkdir -p "$COMMAND_DIR"; then
   echo "ERROR: Could not create command directory: $COMMAND_DIR"
@@ -32,8 +32,7 @@ if ! mkdir -p "$COMMAND_DIR"; then
 fi
 SYSTEM_NAME="$(uname -s)"
 
-# Rebuild the command directory from the current script layout so moved or deleted scripts do not
-# leave stale completions behind.
+# Remove old .sh commands in scripts/
 for old_command in "$COMMAND_DIR"/ez*.sh; do
   [ -e "$old_command" ] || continue
   rm -f "$old_command"
@@ -51,6 +50,7 @@ make_symlink() {
   target_path=$1
   link_path=$2
 
+  # remove old link, create new
   rm -f "$link_path"
   ln -s "$target_path" "$link_path" 2>/dev/null || true
 
@@ -60,11 +60,13 @@ make_symlink() {
 
   rm -f "$link_path"
 
+ # Windows specific linking
   if echo "$SYSTEM_NAME" | grep -E 'MSYS|MINGW|CYGWIN' >/dev/null; then
     link_windows=$(windows_path "$link_path")
     target_windows=$(windows_path "$target_path")
     cmd //c mklink "$link_windows" "$target_windows" >/dev/null 2>&1
   else
+  # Non-Windows symlink attempt failed, try again with a shim.
     ln -s "$target_path" "$link_path"
   fi
 }
@@ -116,8 +118,9 @@ link_script() {
 for script_file in "$SCRIPT_DIR"/ez*.sh "$SCRIPT_DIR"/*/ez*.sh; do
   [ -f "$script_file" ] || continue
 
+  # Loop through in all scripts
   case "$script_file" in
-    "$CORE_DIR/ezprepare.sh"|"$COMMAND_DIR"/*)
+    "$CORE_DIR/ezprepare.sh"|"$COMMAND_DIR"/*)  # Skip these files when linking
       ;;
     *)
       if ! link_script "$script_file"; then

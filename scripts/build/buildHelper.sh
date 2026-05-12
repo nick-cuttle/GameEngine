@@ -1,12 +1,15 @@
 #!/usr/bin/env sh
 
 BUILD_HELPER_DIR="$(CDPATH= cd -- "$(dirname -- "${BUILD_HELPER_PATH:-$0}")" && pwd)"
+
+# load printHelpers.sh
 if [ -f "$BUILD_HELPER_DIR/../core/printHelper.sh" ]; then
     . "$BUILD_HELPER_DIR/../core/printHelper.sh"
 else
     . "$BUILD_HELPER_DIR/printHelper.sh"
 fi
 
+# Global variables for build scripts
 BUILD_HELPER_SYSTEM_NAME=""
 BUILD_HELPER_GENERATOR=""
 BUILD_HELPER_CMAKE_ARGS=""
@@ -50,6 +53,7 @@ init_build_helper() {
 
         BUILD_HELPER_CMAKE_ARGS="$BUILD_HELPER_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=$vcpkg_toolchain"
 
+        # Special handling for MinGW/vcpkg builds to set triplets and binary cache directory
         if echo "$BUILD_HELPER_SYSTEM_NAME" | grep -E 'MSYS|MINGW' >/dev/null; then
             : "${VCPKG_TARGET_TRIPLET:=x64-mingw-dynamic}"
             : "${VCPKG_HOST_TRIPLET:=$VCPKG_TARGET_TRIPLET}"
@@ -59,6 +63,7 @@ init_build_helper() {
             BUILD_HELPER_CMAKE_ARGS="$BUILD_HELPER_CMAKE_ARGS -DVCPKG_HOST_TRIPLET=$VCPKG_HOST_TRIPLET"
         fi
 
+        # Default cache location to current directory if not environment variable.
         if [ -z "$VCPKG_DEFAULT_BINARY_CACHE" ]; then
             export VCPKG_DEFAULT_BINARY_CACHE="$(pwd)/.vcpkg-cache"
         fi
@@ -74,13 +79,13 @@ append_cmake_definition() {
     printf "%s -D%s=%s" "$current" "$name" "$value"
 }
 
+# Determines whether a build directory is Debug or Release based on its name.
 infer_build_type_from_dir() {
     build_dir=$1
     build_name=${build_dir%/}
     build_name=${build_name##*/}
 
-    # Custom build directories are allowed as long as their final path segment contains the intended
-    # CMake build type, e.g. build/Debug_sanitized or build/NickRelease.
+   # Contains Debug, debug build, Release, release build
     case "$build_name" in
         *Debug*) printf "Debug" ;;
         *Release*) printf "Release" ;;
@@ -92,6 +97,7 @@ infer_build_type_from_dir() {
     esac
 }
 
+# check if a mingw build has vcpkg dependencies
 is_mingw_vcpkg_build() {
     configure_log=$1
 
@@ -104,8 +110,7 @@ is_mingw_vcpkg_build() {
 print_configure_log() {
     configure_log=$1
 
-    # Successful MinGW/vcpkg configure logs are extremely noisy. Keep the full log on disk, but
-    # collapse the successful vcpkg install block in terminal output.
+    # Reduce configure outout from vcpkg
     if is_mingw_vcpkg_build "$configure_log"; then
         awk -v blue="$COLOR_BLUE" -v reset="$COLOR_RESET" '
             /^-- Running vcpkg install$/ {
@@ -125,13 +130,14 @@ print_configure_log() {
     fi
 }
 
+# Shorten vcpkg dependency status messages
 summarize_vcpkg_dependencies() {
     configure_log=$1
 
     [ "$BUILD_HELPER_USING_VCPKG" -eq 1 ] || return 0
     [ -f "$configure_log" ] || return 0
 
-    # The detailed vcpkg install output is filtered above, so emit a compact dependency summary.
+    # Common dependencies to check for
     for dependency in catch2 fmt sdl3 spdlog; do
         if grep -E "Restored .* package\(s\)" "$configure_log" >/dev/null &&
             grep -E "(Installing|Removing) [0-9]+/[0-9]+ ${dependency}(:|\\[)" "$configure_log" >/dev/null; then
