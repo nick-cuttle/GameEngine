@@ -15,7 +15,7 @@ usage() {
     echo "Usage: ./scripts/ezbuild.sh [build-dir]"
     echo "Example: ./scripts/ezbuild.sh build/Debug"
     echo "With no build directory, builds build/Debug and build/Release."
-    echo "The CMake build type is inferred from the build directory name."
+    echo "The CMake build type is inferred from Debug or Release in the build directory name."
     echo ""
     echo "Environment:"
     echo "  VCPKG_ROOT                 Enables vcpkg manifest mode when set."
@@ -155,13 +155,27 @@ print_configure_log() {
 
 build() {
     build_dir=$1
-    type=${build_dir%/}
-    type=${type##*/}
+    build_name=${build_dir%/}
+    build_name=${build_name##*/}
 
-    if [ -z "$type" ]; then
+    if [ -z "$build_name" ]; then
         echo "Invalid build directory: $build_dir"
         exit 1
     fi
+
+    case "$build_name" in
+        *Debug*)
+            type=Debug
+            ;;
+        *Release*)
+            type=Release
+            ;;
+        *)
+            echo "Could not infer CMake build type from build directory: $build_dir"
+            echo "Include Debug or Release in the build directory name."
+            exit 1
+            ;;
+    esac
 
     print_status "$COLOR_BLUE" "Configuring $build_dir ($type)"
     print_status "$COLOR_BLUE" "Using CMake generator: $generator"

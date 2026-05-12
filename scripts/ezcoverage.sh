@@ -19,7 +19,7 @@ usage() {
     echo "Usage: ./scripts/ezcoverage.sh [build-dir] [options]"
     echo "Example: ./scripts/ezcoverage.sh build/Coverage/Debug"
     echo "With no build directory, runs build/Coverage/Debug first, then build/Coverage/Release, and combines the report."
-    echo "The CMake build type is inferred from the build directory name."
+    echo "The CMake build type is inferred from Debug or Release in the build directory name."
     echo ""
     echo "Builds the tests with GCC coverage instrumentation, runs them with CTest,"
     echo "and generates text plus HTML coverage reports with gcovr."
@@ -94,13 +94,27 @@ GCOVR_OBJECT_ARGS=""
 
 run_coverage() {
     BUILD_DIR="$1"
-    BUILD_TYPE=${BUILD_DIR%/}
-    BUILD_TYPE=${BUILD_TYPE##*/}
+    BUILD_NAME=${BUILD_DIR%/}
+    BUILD_NAME=${BUILD_NAME##*/}
 
-    if [ -z "$BUILD_TYPE" ]; then
+    if [ -z "$BUILD_NAME" ]; then
         echo "Invalid build directory: $BUILD_DIR"
         exit 1
     fi
+
+    case "$BUILD_NAME" in
+        *Debug*)
+            BUILD_TYPE=Debug
+            ;;
+        *Release*)
+            BUILD_TYPE=Release
+            ;;
+        *)
+            echo "Could not infer CMake build type from build directory: $BUILD_DIR"
+            echo "Include Debug or Release in the build directory name."
+            exit 1
+            ;;
+    esac
 
     printf "%s==> Configuring %s coverage build (%s)%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$BUILD_TYPE" "$COLOR_RESET"
     cmake \

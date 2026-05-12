@@ -27,8 +27,9 @@ The helper script configures and builds into the provided build directory:
 ./scripts/ezbuild.sh build/Debug
 ```
 
-The CMake build type is inferred from the final directory name. With no build directory, the
-script builds both `build/Debug` and `build/Release`.
+The CMake build type is inferred from `Debug` or `Release` in the final directory name, so paths
+like `build/Debug_myBuild` and `build/NickRelease` work. With no build directory, the script builds
+both `build/Debug` and `build/Release`.
 
 Equivalent direct CMake commands:
 
@@ -108,6 +109,15 @@ Generate coverage reports with GCC coverage instrumentation:
 ```
 
 Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.
+
+Run the build gaunlet across the main CMake option matrix:
+
+```bash
+./scripts/ezgaunlet.sh
+```
+
+This builds Debug and Release variants while toggling tests, warnings-as-errors, and dependency
+fetching. Use `./scripts/ezgaunlet.sh --help` for heavier SDL fetch variants and test execution.
 
 ## Project Layout
 
