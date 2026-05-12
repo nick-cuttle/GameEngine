@@ -8,6 +8,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <type_traits>
+#include <utility>
+
 TEST_CASE("Renderer", "[unit][rendering][renderer]")
 {
     SECTION("renderer configuration selects OpenGL and vertical synchronization by default")
@@ -28,6 +31,29 @@ TEST_CASE("Renderer", "[unit][rendering][renderer]")
         REQUIRE(color.green == 0.0F);
         REQUIRE(color.blue == 0.0F);
         REQUIRE(color.alpha == 1.0F);
+    }
+
+    SECTION("frame boundary reports whether the graphics surface is drawable")
+    {
+        static_assert(
+            std::is_same_v<decltype(std::declval<Engine::Renderer &>().beginFrame()), bool>);
+    }
+
+    SECTION("window events can be submitted before renderer initialization")
+    {
+        Engine::Renderer renderer;
+        Engine::WindowEvent windowEvent = Engine::GraphicsSurfaceSizeChanged{
+            Engine::WindowIdentifier{1}, Engine::GraphicsSurfaceSize{0, 0}};
+
+        REQUIRE_NOTHROW(renderer.handleWindowEvent(windowEvent));
+    }
+
+    SECTION("shutdown is idempotent")
+    {
+        Engine::Renderer renderer;
+
+        renderer.shutdown();
+        REQUIRE_NOTHROW(renderer.shutdown());
     }
 
     SECTION("vulkan selection fails without a Vulkan dependency")

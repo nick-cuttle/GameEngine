@@ -26,8 +26,13 @@ public:
     virtual void attachGraphicsSurface(WindowSystem &windowSystem,
                                        WindowIdentifier windowIdentifier) = 0;
 
+    /// @brief Records a Window Event that may affect backend-owned surface state.
+    /// @param windowEvent Engine-owned Window Event observed by the Window System.
+    virtual void handleWindowEvent(WindowEvent const &windowEvent) = 0;
+
     /// @brief Starts rendering work for the current frame.
-    virtual void beginFrame() = 0;
+    /// @return True when the attached graphics surface can be rendered this frame.
+    virtual bool beginFrame() = 0;
 
     /// @brief Clears the attached graphics surface.
     /// @param color Linear color used for the clear operation.

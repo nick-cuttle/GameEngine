@@ -12,9 +12,11 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace
 {
@@ -80,9 +82,25 @@ struct OpenGLRenderingBackend::Implementation
     /// @brief Platform graphics surface currently attached to this backend.
     PlatformGraphicsSurface graphicsSurface;
     /// @brief OpenGL context owned by this backend.
-    SDL_GLContext renderingContext = nullptr;
+    SDL_GLContext renderingContext{nullptr};
+    /// @brief Engine window associated with the attached graphics surface.
+    WindowIdentifier windowIdentifier{};
     /// @brief Whether the backend has an attached graphics surface and context.
-    bool isGraphicsSurfaceAttached = false;
+    bool isGraphicsSurfaceAttached{false};
+    /// @brief Whether the current frame has a drawable graphics surface.
+    bool isCurrentFrameDrawable{false};
+    /// @brief Pending graphics surface size reported by Window Events for the next frame boundary.
+    std::optional<GraphicsSurfaceSize> pendingGraphicsSurfaceSize;
+
+    /// @brief Makes the backend OpenGL context current for the attached graphics surface.
+    /// @throws std::runtime_error when SDL cannot make the context current.
+    void makeContextCurrent()
+    {
+        if (!SDL_GL_MakeCurrent(graphicsSurface.platformWindow, renderingContext))
+        {
+            throw platformError("Failed to make OpenGL context current");
+        }
+    }
 };
 
 OpenGLRenderingBackend::OpenGLRenderingBackend(Logger logger, PresentationMode presentationMode)
@@ -106,6 +124,7 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
 
     implementation->graphicsSurface =
         GraphicsSurfaceFactory::createOpenGLGraphicsSurface(windowSystem, windowIdentifier);
+    implementation->windowIdentifier = windowIdentifier;
     implementation->renderingContext =
         SDL_GL_CreateContext(implementation->graphicsSurface.platformWindow);
 
@@ -116,11 +135,14 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
 
     implementation->isGraphicsSurfaceAttached = true;
 
-    if (!SDL_GL_MakeCurrent(implementation->graphicsSurface.platformWindow,
-                            implementation->renderingContext))
+    try
+    {
+        implementation->makeContextCurrent();
+    }
+    catch (...)
     {
         shutdown();
-        throw platformError("Failed to make OpenGL context current");
+        throw;
     }
 
     if (gladLoadGL(loadOpenGLProcedure) == 0)
@@ -141,30 +163,65 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
         throw platformError("Failed to set OpenGL Presentation Mode");
     }
 
-    beginFrame();
+    // Initializes context, surface size, and viewport; drawability is handled by regular frame calls.
+    (void)beginFrame();
 
     logger.info("OpenGL 4.6 core Rendering Backend has been initialized.");
 }
 
-void OpenGLRenderingBackend::beginFrame()
+void OpenGLRenderingBackend::handleWindowEvent(WindowEvent const &windowEvent)
+{
+    if (!implementation->isGraphicsSurfaceAttached)
+    {
+        return;
+    }
+
+    GraphicsSurfaceSizeChanged const *graphicsSurfaceSizeChanged{std::get_if<GraphicsSurfaceSizeChanged>(&windowEvent)};
+    if (graphicsSurfaceSizeChanged == nullptr ||
+        graphicsSurfaceSizeChanged->windowIdentifier != implementation->windowIdentifier)
+    {
+        return;
+    }
+
+    implementation->pendingGraphicsSurfaceSize = graphicsSurfaceSizeChanged->graphicsSurfaceSize;
+}
+
+bool OpenGLRenderingBackend::beginFrame()
 {
     if (!implementation->isGraphicsSurfaceAttached)
     {
         throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
     }
 
-    if (!SDL_GL_MakeCurrent(implementation->graphicsSurface.platformWindow,
-                            implementation->renderingContext))
+    implementation->makeContextCurrent();
+
+    // Update the engine state with the pending graphics surface size, if available.
+    if (implementation->pendingGraphicsSurfaceSize.has_value())
     {
-        throw platformError("Failed to make OpenGL context current");
+        implementation->graphicsSurface.graphicsSurfaceSize =
+            *implementation->pendingGraphicsSurfaceSize;
+        implementation->pendingGraphicsSurfaceSize.reset();
+    }
+    else
+    {
+        implementation->graphicsSurface.graphicsSurfaceSize =
+            queryGraphicsSurfaceSize(implementation->graphicsSurface.platformWindow);
     }
 
-    implementation->graphicsSurface.graphicsSurfaceSize =
-        queryGraphicsSurfaceSize(implementation->graphicsSurface.platformWindow);
+    implementation->isCurrentFrameDrawable =
+        implementation->graphicsSurface.graphicsSurfaceSize.width > 0 &&
+        implementation->graphicsSurface.graphicsSurfaceSize.height > 0;
+
+    if (!implementation->isCurrentFrameDrawable)
+    {
+        return false;
+    }
 
     glViewport(0, 0,
                static_cast<GLsizei>(implementation->graphicsSurface.graphicsSurfaceSize.width),
                static_cast<GLsizei>(implementation->graphicsSurface.graphicsSurfaceSize.height));
+
+    return true;
 }
 
 void OpenGLRenderingBackend::clear(LinearColor const &color)
@@ -173,6 +230,13 @@ void OpenGLRenderingBackend::clear(LinearColor const &color)
     {
         throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
     }
+
+    if (!implementation->isCurrentFrameDrawable)
+    {
+        return;
+    }
+
+    implementation->makeContextCurrent();
 
     glClearColor(color.red, color.green, color.blue, color.alpha);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -184,6 +248,13 @@ void OpenGLRenderingBackend::present()
     {
         throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
     }
+
+    if (!implementation->isCurrentFrameDrawable)
+    {
+        return;
+    }
+
+    implementation->makeContextCurrent();
 
     if (!SDL_GL_SwapWindow(implementation->graphicsSurface.platformWindow))
     {
@@ -205,7 +276,10 @@ void OpenGLRenderingBackend::shutdown() noexcept
 
     implementation->renderingContext = nullptr;
     implementation->graphicsSurface = {};
+    implementation->windowIdentifier = {};
     implementation->isGraphicsSurfaceAttached = false;
+    implementation->isCurrentFrameDrawable = false;
+    implementation->pendingGraphicsSurfaceSize.reset();
 }
 
 } // namespace Engine::Rendering::Internal

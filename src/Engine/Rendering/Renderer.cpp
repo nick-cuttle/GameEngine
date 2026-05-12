@@ -79,14 +79,24 @@ void Renderer::attachGraphicsSurface(WindowSystem &windowSystem, WindowIdentifie
     implementation->renderingBackend->attachGraphicsSurface(windowSystem, windowIdentifier);
 }
 
-void Renderer::beginFrame()
+void Renderer::handleWindowEvent(WindowEvent const &windowEvent)
+{
+    if (implementation->renderingBackend == nullptr)
+    {
+        return;
+    }
+
+    implementation->renderingBackend->handleWindowEvent(windowEvent);
+}
+
+bool Renderer::beginFrame()
 {
     if (implementation->renderingBackend == nullptr)
     {
         throw std::runtime_error("Renderer must be initialized before drawing.");
     }
 
-    implementation->renderingBackend->beginFrame();
+    return implementation->renderingBackend->beginFrame();
 }
 
 void Renderer::clear(LinearColor const &color)

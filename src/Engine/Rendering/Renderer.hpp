@@ -90,10 +90,15 @@ public:
     ///         System.
     void attachGraphicsSurface(WindowSystem &windowSystem, WindowIdentifier windowIdentifier);
 
+    /// @brief Records a Window Event that may affect the attached graphics surface.
+    /// @param windowEvent Engine-owned Window Event observed by the Window System.
+    void handleWindowEvent(WindowEvent const &windowEvent);
+
     /// @brief Starts rendering work for a frame on the attached graphics surface.
+    /// @return True when rendering and presentation should continue for this frame.
     /// @throws std::runtime_error when the Renderer is not initialized, no graphics surface is
     ///         attached, or the backend cannot make its context current.
-    void beginFrame();
+    bool beginFrame();
 
     /// @brief Clears the attached graphics surface to the specified linear color.
     /// @param color Linear color used for the clear operation.
