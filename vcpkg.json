@@ -1,0 +1,10 @@
+{
+  "name": "gameengine",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "catch2",
+    "fmt",
+    "sdl3",
+    "spdlog"
+  ]
+}

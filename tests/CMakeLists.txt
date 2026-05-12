@@ -1,13 +1,7 @@
-include(FetchContent)
-
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.14.0
-)
-FetchContent_MakeAvailable(Catch2)
-
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+include(${CMAKE_SOURCE_DIR}/cmake/Dependencies.cmake)
+engine_find_or_fetch_sdl3()
+engine_find_or_fetch_spdlog()
+engine_find_or_fetch_catch2()
 include(Catch)
 
 add_executable(EngineUnitTests
@@ -39,5 +33,7 @@ target_compile_definitions(EngineUnitTests
 )
 
 catch_discover_tests(EngineUnitTests
+    # On Windows/vcpkg, app-local DLLs are copied after linking; defer discovery until CTest runs.
+    DISCOVERY_MODE PRE_TEST
     PROPERTIES LABELS "unit"
 )
