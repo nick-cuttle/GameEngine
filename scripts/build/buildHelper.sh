@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 
 BUILD_HELPER_DIR="$(CDPATH= cd -- "$(dirname -- "${BUILD_HELPER_PATH:-$0}")" && pwd)"
-if [ -f "$BUILD_HELPER_DIR/../printHelper.sh" ]; then
-    . "$BUILD_HELPER_DIR/../printHelper.sh"
+if [ -f "$BUILD_HELPER_DIR/../core/printHelper.sh" ]; then
+    . "$BUILD_HELPER_DIR/../core/printHelper.sh"
 else
     . "$BUILD_HELPER_DIR/printHelper.sh"
 fi

@@ -3,8 +3,8 @@
 set -e
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-if [ -f "$SCRIPT_DIR/../printHelper.sh" ]; then
-    . "$SCRIPT_DIR/../printHelper.sh"
+if [ -f "$SCRIPT_DIR/../core/printHelper.sh" ]; then
+    . "$SCRIPT_DIR/../core/printHelper.sh"
 else
     . "$SCRIPT_DIR/printHelper.sh"
 fi

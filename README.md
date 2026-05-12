@@ -12,7 +12,7 @@ For project vocabulary, subsystem boundaries, and architectural decisions, start
 - A C++23 compiler
 - Git, because dependencies are fetched with CMake `FetchContent`
 - A POSIX-compatible shell for the helper scripts
-- `clang-format` for `scripts/ezformat.sh`
+- `clang-format` for `ezformat.sh`
 - `gcovr` for `ezcoverage.sh`
 
 The engine code targets Linux and Windows. The helper scripts select Unix Makefiles on Linux and
@@ -24,7 +24,7 @@ commands directly.
 Prepare shell commands for the moved script layout:
 
 ```bash
-source scripts/ezprepare.sh
+source scripts/core/ezprepare.sh
 ```
 
 This creates symbolic links in `scripts/scripts` and prepends that directory to `PATH`. On Windows,
@@ -78,7 +78,7 @@ After building, run the executable from the chosen configuration:
 ./build/Debug/bin/GameEngine
 ```
 
-The `scripts/ezrun.sh` helper defaults to `build/Release` and accepts a build directory argument.
+The `ezrun.sh` helper defaults to `build/Release` and accepts a build directory argument.
 It checks for both `GameEngine` and `GameEngine.exe`.
 
 ## Testing

@@ -3,7 +3,7 @@
 # Must be sourced so PATH changes persist in the current shell.
 if [ "$0" = "$BASH_SOURCE" ] || { [ -n "$ZSH_VERSION" ] && [ "${(%):-%N}" = "$0" ]; }; then
   echo "ERROR: Please source this script, do not execute it."
-  echo "Usage: source scripts/ezprepare.sh"
+  echo "Usage: source scripts/core/ezprepare.sh"
   return 1 2>/dev/null || exit 1
 fi
 
@@ -17,7 +17,8 @@ fi
 
 # Resolve the real scripts directory from the sourced file instead of the caller's working
 # directory; developers usually source this once from arbitrary shells.
-SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)"
+CORE_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd)"
+SCRIPT_DIR="$(cd "$CORE_DIR/.." 2>/dev/null && pwd)"
 
 if [ -z "$SCRIPT_DIR" ]; then
   echo "ERROR: Could not determine scripts directory."
@@ -25,7 +26,10 @@ if [ -z "$SCRIPT_DIR" ]; then
 fi
 
 COMMAND_DIR="$SCRIPT_DIR/scripts"
-mkdir -p "$COMMAND_DIR"
+if ! mkdir -p "$COMMAND_DIR"; then
+  echo "ERROR: Could not create command directory: $COMMAND_DIR"
+  return 1 2>/dev/null || exit 1
+fi
 SYSTEM_NAME="$(uname -s)"
 
 # Rebuild the command directory from the current script layout so moved or deleted scripts do not
@@ -113,7 +117,7 @@ for script_file in "$SCRIPT_DIR"/ez*.sh "$SCRIPT_DIR"/*/ez*.sh; do
   [ -f "$script_file" ] || continue
 
   case "$script_file" in
-    "$SCRIPT_DIR/ezprepare.sh"|"$COMMAND_DIR"/*)
+    "$CORE_DIR/ezprepare.sh"|"$COMMAND_DIR"/*)
       ;;
     *)
       if ! link_script "$script_file"; then
