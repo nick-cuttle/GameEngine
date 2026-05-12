@@ -13,7 +13,7 @@ fi
 # Validate build directory exists
 if [ ! -d "$BASE_DIR" ]; then
     echo "Error: build directory does not exist: $BASE_DIR"
-    echo "Run ./scripts/ezbuild.sh $BASE_DIR first"
+    echo "Run ezbuild.sh $BASE_DIR first"
     exit 1
 fi
 

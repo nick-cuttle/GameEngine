@@ -14,8 +14,8 @@ export CLICOLOR_FORCE=1
 export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
-    echo "Usage: ./scripts/eztest.sh [build-dir] [options]"
-    echo "Example: ./scripts/eztest.sh build/Debug"
+    echo "Usage: eztest.sh [build-dir] [options]"
+    echo "Example: eztest.sh build/Debug"
     echo "With no build directory, runs build/Debug first, then build/Release."
     echo ""
     echo "Options:"
@@ -73,7 +73,7 @@ run_tests() {
 
     if [ ! -d "$BUILD_DIR" ]; then
         echo "Error: build directory does not exist: $BUILD_DIR"
-        echo "Run ./scripts/ezbuild.sh $BUILD_DIR first"
+        echo "Run ezbuild.sh $BUILD_DIR first"
         exit 1
     fi
 

@@ -13,18 +13,29 @@ For project vocabulary, subsystem boundaries, and architectural decisions, start
 - Git, because dependencies are fetched with CMake `FetchContent`
 - A POSIX-compatible shell for the helper scripts
 - `clang-format` for `scripts/ezformat.sh`
-- `gcovr` for `scripts/ezcoverage.sh`
+- `gcovr` for `ezcoverage.sh`
 
 The engine code targets Linux and Windows. The helper scripts select Unix Makefiles on Linux and
 MinGW Makefiles on MSYS or MinGW shells. For other Windows generators, use the equivalent CMake
 commands directly.
+
+## Helper Scripts
+
+Prepare shell commands for the moved script layout:
+
+```bash
+source scripts/ezprepare.sh
+```
+
+This creates symbolic links in `scripts/scripts` and prepends that directory to `PATH`. On Windows,
+native symlink creation requires Developer Mode or equivalent symlink privileges.
 
 ## Building
 
 The helper script configures and builds into the provided build directory:
 
 ```bash
-./scripts/ezbuild.sh build/Debug
+ezbuild.sh build/Debug
 ```
 
 The CMake build type is inferred from `Debug` or `Release` in the final directory name, so paths
@@ -75,15 +86,15 @@ It checks for both `GameEngine` and `GameEngine.exe`.
 Build first, then run unit tests with:
 
 ```bash
-./scripts/eztest.sh build/Debug
+eztest.sh build/Debug
 ```
 
 With no build directory, `eztest.sh` runs `build/Debug` and then `build/Release`. Useful filters:
 
 ```bash
-./scripts/eztest.sh build/Debug --list
-./scripts/eztest.sh build/Debug --label unit
-./scripts/eztest.sh build/Debug --test WindowSystem
+eztest.sh build/Debug --list
+eztest.sh build/Debug --label unit
+eztest.sh build/Debug --test WindowSystem
 ```
 
 CTest discovers the Catch2 test cases from `EngineUnitTests`. Current unit tests cover:
@@ -99,13 +110,13 @@ CTest discovers the Catch2 test cases from `EngineUnitTests`. Current unit tests
 Format C++ source and headers:
 
 ```bash
-./scripts/ezformat.sh
+ezformat.sh
 ```
 
 Generate coverage reports with GCC coverage instrumentation:
 
 ```bash
-./scripts/ezcoverage.sh build/Coverage/Debug
+ezcoverage.sh build/Coverage/Debug
 ```
 
 Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.
@@ -113,11 +124,11 @@ Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.
 Run the build gaunlet across the main CMake option matrix:
 
 ```bash
-./scripts/ezgaunlet.sh
+ezgaunlet.sh
 ```
 
 This builds Debug and Release variants while toggling tests, warnings-as-errors, and dependency
-fetching. Use `./scripts/ezgaunlet.sh --help` for heavier SDL fetch variants and test execution.
+fetching. Use `ezgaunlet.sh --help` for heavier SDL fetch variants and test execution.
 
 ## Project Layout
 

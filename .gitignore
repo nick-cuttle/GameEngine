@@ -1,5 +1,5 @@
-build/
-coverage/
+/build/
+/coverage/
 .vcpkg-cache/
 tests/tmp/
 .vscode/

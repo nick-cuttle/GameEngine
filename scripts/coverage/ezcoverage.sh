@@ -2,22 +2,22 @@
 
 set -e
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+. "$SCRIPT_DIR/../build/buildHelper.sh"
+. "$SCRIPT_DIR/../test/testHelper.sh"
+
 BUILD_DIR=""
 COVERAGE_BUILD_ROOT="build/Coverage"
 COVERAGE_DIR="coverage"
 TEST_PATTERN=""
 LABEL=""
 OPEN_REPORT=0
-COLOR_RESET="$(printf '\033[0m')"
-COLOR_BLUE="$(printf '\033[1;34m')"
-COLOR_GREEN="$(printf '\033[1;32m')"
 
-export CLICOLOR_FORCE=1
 export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
-    echo "Usage: ./scripts/ezcoverage.sh [build-dir] [options]"
-    echo "Example: ./scripts/ezcoverage.sh build/Coverage/Debug"
+    echo "Usage: ezcoverage.sh [build-dir] [options]"
+    echo "Example: ezcoverage.sh build/Coverage/Debug"
     echo "With no build directory, runs build/Coverage/Debug first, then build/Coverage/Release, and combines the report."
     echo "The CMake build type is inferred from Debug or Release in the build directory name."
     echo ""
@@ -80,69 +80,30 @@ if ! command -v gcovr >/dev/null 2>&1; then
     exit 1
 fi
 
-if uname -s | grep Linux >/dev/null; then
-    GENERATOR="Unix Makefiles"
-elif uname -s | grep -E 'MSYS|MINGW' >/dev/null; then
-    GENERATOR="MinGW Makefiles"
-else
-    echo "Unsupported operating system!"
-    exit 1
-fi
+init_build_helper
 
-JOBS="$(nproc 2>/dev/null || echo 8)"
 GCOVR_OBJECT_ARGS=""
 
 run_coverage() {
     BUILD_DIR="$1"
-    BUILD_NAME=${BUILD_DIR%/}
-    BUILD_NAME=${BUILD_NAME##*/}
+    BUILD_TYPE=$(infer_build_type_from_dir "$BUILD_DIR") || exit 1
+    CONFIGURE_LOG="$BUILD_DIR/ezcoverage-configure.log"
+    # Coverage instrumentation is local to this build directory; normal Debug/Release builds remain
+    # untouched.
+    EXTRA_CMAKE_ARGS="-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage -DBUILD_TESTS=ON"
 
-    if [ -z "$BUILD_NAME" ]; then
-        echo "Invalid build directory: $BUILD_DIR"
+    printf "%s==> Configuring %s coverage build (%s)%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$BUILD_TYPE" "$COLOR_RESET"
+    if ! configure_build "$BUILD_DIR" "$BUILD_TYPE" "$CONFIGURE_LOG" "$EXTRA_CMAKE_ARGS"; then
+        print_status "$COLOR_RED" "CMake configuration failed for $BUILD_DIR. Check the log for details: $CONFIGURE_LOG"
         exit 1
     fi
 
-    case "$BUILD_NAME" in
-        *Debug*)
-            BUILD_TYPE=Debug
-            ;;
-        *Release*)
-            BUILD_TYPE=Release
-            ;;
-        *)
-            echo "Could not infer CMake build type from build directory: $BUILD_DIR"
-            echo "Include Debug or Release in the build directory name."
-            exit 1
-            ;;
-    esac
-
-    printf "%s==> Configuring %s coverage build (%s)%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$BUILD_TYPE" "$COLOR_RESET"
-    cmake \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-        -DCMAKE_CXX_FLAGS="--coverage" \
-        -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
-        -DCMAKE_SHARED_LINKER_FLAGS="--coverage" \
-        -DBUILD_TESTS=ON \
-        -G "$GENERATOR" \
-        -S . \
-        -B "$BUILD_DIR"
-
-    printf "%s==> Building %s coverage unit tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
-    cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j"$JOBS"
-
+    # Remove old counters after building and before running tests so gcovr reports only this run.
     find "$BUILD_DIR" -name '*.gcda' -delete
 
     printf "%s==> Running %s coverage tests%s\n" "$COLOR_BLUE" "$BUILD_DIR" "$COLOR_RESET"
-    if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
-    elif [ -n "$TEST_PATTERN" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN"
-    elif [ -n "$LABEL" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -L "$LABEL"
-    else
-        ctest --test-dir "$BUILD_DIR" --output-on-failure
-    fi
+    # Delegate CTest flags and test-target rebuilding to the normal test workflow.
+    run_eztest "$BUILD_DIR" "$TEST_PATTERN" "$LABEL"
 
     GCOVR_OBJECT_ARGS="$GCOVR_OBJECT_ARGS --object-directory $BUILD_DIR"
 }
