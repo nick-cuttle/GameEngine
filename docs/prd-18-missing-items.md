@@ -6,7 +6,7 @@ The following PRD #18 items were identified as missing from the current implemen
 
 <!--2. `RendererConfiguration` is missing sRGB preference and debug options. Current config only selects backend and presentation mode in `src/Engine/Rendering/Renderer.hpp`.-->
 
-3. sRGB-capable OpenGL surface/default path is not implemented. No `SDL_GL_FRAMEBUFFER_SRGB_CAPABLE`, `GL_FRAMEBUFFER_SRGB`, or sRGB configuration exists in `src/`.
+<!--3. sRGB-capable OpenGL surface/default path is not implemented. No `SDL_GL_FRAMEBUFFER_SRGB_CAPABLE`, `GL_FRAMEBUFFER_SRGB`, or sRGB configuration exists in `src/`.-->
 
 4. OpenGL debug output for debug builds is not implemented. No debug context flag, debug callback, or `GL_DEBUG_OUTPUT` setup exists.
 

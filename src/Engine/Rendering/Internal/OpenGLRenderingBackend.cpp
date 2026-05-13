@@ -160,9 +160,10 @@ struct OpenGLRenderingBackend::Implementation
     }
 };
 
-OpenGLRenderingBackend::OpenGLRenderingBackend(Logger logger, PresentationMode presentationMode)
+OpenGLRenderingBackend::OpenGLRenderingBackend(Logger logger, PresentationMode presentationMode,
+                                               SrgbSurfacePreference srgbSurfacePreference)
     : implementation(std::make_unique<Implementation>()), logger(logger),
-      presentationMode(presentationMode)
+      presentationMode(presentationMode), srgbSurfacePreference(srgbSurfacePreference)
 {
 }
 
@@ -253,6 +254,15 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
     {
         implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw std::runtime_error("OpenGL 4.6 core profile is required but not available.");
+    }
+
+    if (srgbSurfacePreference == SrgbSurfacePreference::Preferred)
+    {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+    }
+    else
+    {
+        glDisable(GL_FRAMEBUFFER_SRGB);
     }
 
     if (!SDL_GL_SetSwapInterval(swapIntervalForPresentationMode(presentationMode)))

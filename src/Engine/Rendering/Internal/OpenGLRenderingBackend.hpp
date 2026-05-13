@@ -16,10 +16,12 @@ namespace Engine::Rendering::Internal
 class OpenGLRenderingBackend final : public RenderingBackend
 {
 public:
-    /// @brief Constructs an OpenGL backend with the requested presentation policy.
+    /// @brief Constructs an OpenGL backend with the requested presentation and color-space policy.
     /// @param logger Logger used for backend lifecycle messages.
     /// @param presentationMode Presentation timing requested for frame swaps.
-    OpenGLRenderingBackend(Logger logger, PresentationMode presentationMode);
+    /// @param srgbSurfacePreference Whether to enable sRGB conversion for framebuffer writes.
+    OpenGLRenderingBackend(Logger logger, PresentationMode presentationMode,
+                           SrgbSurfacePreference srgbSurfacePreference);
 
     /// @brief Releases the OpenGL context if it is still attached.
     ~OpenGLRenderingBackend() override;
@@ -60,6 +62,8 @@ private:
     Logger logger;
     /// @brief Presentation timing requested for frame swaps.
     PresentationMode presentationMode;
+    /// @brief Whether the backend should enable sRGB conversion for framebuffer writes.
+    SrgbSurfacePreference srgbSurfacePreference;
 };
 
 } // namespace Engine::Rendering::Internal

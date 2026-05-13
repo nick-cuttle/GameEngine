@@ -63,6 +63,8 @@ void configureOpenGLWindowAttributes()
     setOpenGLWindowAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE,
                              "Failed to set OpenGL core profile");
     setOpenGLWindowAttribute(SDL_GL_DOUBLEBUFFER, 1, "Failed to enable OpenGL double buffering");
+    setOpenGLWindowAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1,
+                             "Failed to request an sRGB-capable OpenGL framebuffer");
 }
 
 /// @brief Formats an SDL event description for trace logging.

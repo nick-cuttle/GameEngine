@@ -131,6 +131,27 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         REQUIRE((platformWindowFlags & SDL_WINDOW_HIGH_PIXEL_DENSITY) != 0U);
     }
 
+    SECTION("OpenGL windows request an sRGB-capable graphics surface")
+    {
+        Engine::WindowConfiguration configuration;
+        configuration.isVisible = false;
+        configuration.graphicsSurfaceCapability = Engine::GraphicsSurfaceCapability::OpenGL;
+
+        try
+        {
+            (void)windowSystem.createPrimaryWindow(configuration);
+        }
+        catch (std::runtime_error const &)
+        {
+            // The dummy SDL video backend used by unit tests does not have to support creating an
+            // OpenGL window. The pre-window GL attributes are still observable after the attempt.
+        }
+
+        int isSrgbCapable = 0;
+        REQUIRE(SDL_GL_GetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, &isSrgbCapable));
+        REQUIRE(isSrgbCapable == 1);
+    }
+
     SECTION("poll result starts empty")
     {
         Engine::WindowEventPollResult pollResult;

@@ -26,7 +26,7 @@ createRenderingBackend(Engine::RendererConfiguration const &configuration, Engin
     {
     case Engine::RenderingBackendSelection::OpenGL:
         return std::make_unique<Engine::Rendering::Internal::OpenGLRenderingBackend>(
-            logger, configuration.presentationMode);
+            logger, configuration.presentationMode, configuration.srgbSurfacePreference);
     case Engine::RenderingBackendSelection::Vulkan:
         throw std::runtime_error("Vulkan Rendering Backend is not implemented.");
     }
