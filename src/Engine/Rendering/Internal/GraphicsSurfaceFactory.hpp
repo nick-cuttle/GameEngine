@@ -17,6 +17,10 @@ namespace Engine::Rendering::Internal
 ///          details because only engine implementation files include it.
 struct PlatformGraphicsSurface
 {
+    /// @brief Window System that owns the platform window.
+    WindowSystem *windowSystem = nullptr;
+    /// @brief Window Identifier whose attached surface ownership is tracked.
+    WindowIdentifier windowIdentifier{};
     /// @brief Platform window that owns the backend graphics surface.
     SDL_Window *platformWindow = nullptr;
     /// @brief Current drawable pixel size for the graphics surface.
@@ -39,6 +43,10 @@ public:
     ///         System.
     static PlatformGraphicsSurface createOpenGLGraphicsSurface(WindowSystem &windowSystem,
                                                                WindowIdentifier windowIdentifier);
+
+    /// @brief Releases Window System attachment tracking for a Graphics Surface.
+    /// @param graphicsSurface Platform graphics surface being released by a Rendering Backend.
+    static void releaseGraphicsSurface(PlatformGraphicsSurface &graphicsSurface) noexcept;
 };
 
 } // namespace Engine::Rendering::Internal

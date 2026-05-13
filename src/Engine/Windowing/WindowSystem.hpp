@@ -225,6 +225,34 @@ public:
     ///         platform backend's supported signed range.
     WindowIdentifier createPrimaryWindow(WindowConfiguration const &configuration);
 
+    /// @brief Creates an additional Window System managed window.
+    /// @param configuration Engine-owned window creation settings.
+    /// @return Stable identifier for the created window.
+    /// @throws std::runtime_error if the Window System is not initialized or the platform backend
+    ///         cannot create, identify, or present the window.
+    /// @throws std::invalid_argument if the configured width or height is zero or exceeds the
+    ///         platform backend's supported signed range.
+    WindowIdentifier createWindow(WindowConfiguration const &configuration);
+
+    /// @brief Destroys a managed window by identifier.
+    /// @param windowIdentifier Window System managed window to destroy.
+    /// @throws std::invalid_argument when the identifier is not managed by the Window System.
+    /// @throws std::runtime_error when a Renderer still has a Graphics Surface attached.
+    void destroyWindow(WindowIdentifier windowIdentifier);
+
+    /// @brief Applies the default Runtime Loop close policy for a Close Request.
+    /// @param windowIdentifier Window that received the Close Request.
+    /// @return True when the Primary Window requested application shutdown; false when a
+    ///         non-primary window was closed without requesting shutdown.
+    /// @throws std::invalid_argument when the identifier is not managed by the Window System.
+    /// @throws std::runtime_error when a non-primary window still has a Graphics Surface attached.
+    bool handleDefaultCloseRequest(WindowIdentifier windowIdentifier);
+
+    /// @brief Reports whether a Window Identifier currently refers to a managed window.
+    /// @param windowIdentifier Engine-owned window identifier to query.
+    /// @return True when the Window System still owns the referenced window.
+    [[nodiscard]] bool isWindowManaged(WindowIdentifier windowIdentifier) const;
+
     /// @brief Drains pending platform events and returns engine-owned window results.
     /// @return Window event batch plus application-level quit state.
     /// @details If the Window System is not initialized, this returns an empty result without
@@ -245,6 +273,14 @@ private:
     /// @details Needed to separate Logger usage from platform-specific teardown in shutdown() and
     /// the destructor.
     void releaseResources() noexcept;
+
+    /// @brief Records that a Renderer attached a Graphics Surface to a managed window.
+    /// @param windowIdentifier Window receiving a renderer-owned Graphics Surface.
+    void registerAttachedGraphicsSurface(WindowIdentifier windowIdentifier);
+
+    /// @brief Records that a Renderer released a Graphics Surface from a managed window.
+    /// @param windowIdentifier Window whose renderer-owned Graphics Surface was released.
+    void unregisterAttachedGraphicsSurface(WindowIdentifier windowIdentifier) noexcept;
 };
 
 } // namespace Engine

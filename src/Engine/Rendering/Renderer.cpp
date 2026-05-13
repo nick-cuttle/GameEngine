@@ -79,6 +79,16 @@ void Renderer::attachGraphicsSurface(WindowSystem &windowSystem, WindowIdentifie
     implementation->renderingBackend->attachGraphicsSurface(windowSystem, windowIdentifier);
 }
 
+void Renderer::detachGraphicsSurface(WindowIdentifier windowIdentifier) noexcept
+{
+    if (implementation->renderingBackend == nullptr)
+    {
+        return;
+    }
+
+    implementation->renderingBackend->detachGraphicsSurface(windowIdentifier);
+}
+
 void Renderer::handleWindowEvent(WindowEvent const &windowEvent)
 {
     if (implementation->renderingBackend == nullptr)

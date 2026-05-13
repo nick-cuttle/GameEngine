@@ -4,10 +4,12 @@
  */
 
 #include "OpenGLRenderingBackend.hpp"
+#include "Engine/Windowing/WindowSystem.hpp"
 
 #include <Engine/Rendering/Internal/GraphicsSurfaceFactory.hpp>
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include <glad/gl.h>
 
 #include <algorithm>
@@ -16,6 +18,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <variant>
 
 namespace
@@ -79,27 +82,69 @@ namespace Engine::Rendering::Internal
 
 struct OpenGLRenderingBackend::Implementation
 {
-    /// @brief Platform graphics surface currently attached to this backend.
-    PlatformGraphicsSurface graphicsSurface;
-    /// @brief OpenGL context owned by this backend.
-    SDL_GLContext renderingContext{nullptr};
-    /// @brief Engine window associated with the attached graphics surface.
-    WindowIdentifier windowIdentifier{};
-    /// @brief Whether the backend has an attached graphics surface and context.
-    bool isGraphicsSurfaceAttached{false};
+    /// @brief OpenGL state owned for one renderer-managed Graphics Surface.
+    struct AttachedGraphicsSurface
+    {
+        /// @brief Platform graphics surface currently attached to this backend.
+        PlatformGraphicsSurface graphicsSurface;
+        /// @brief OpenGL context owned by this backend surface.
+        SDL_GLContext renderingContext{nullptr};
+        /// @brief Pending graphics surface size reported by Window Events for the next frame.
+        std::optional<GraphicsSurfaceSize> pendingGraphicsSurfaceSize;
+    };
+
+    /// @brief Renderer-managed Graphics Surfaces keyed by Window Identifier.
+    std::unordered_map<std::uint32_t, AttachedGraphicsSurface> graphicsSurfaceByWindowIdentifier;
+    /// @brief Active surface used by legacy single-surface frame commands.
+    WindowIdentifier activeWindowIdentifier{};
     /// @brief Whether the current frame has a drawable graphics surface.
     bool isCurrentFrameDrawable{false};
-    /// @brief Pending graphics surface size reported by Window Events for the next frame boundary.
-    std::optional<GraphicsSurfaceSize> pendingGraphicsSurfaceSize;
 
     /// @brief Makes the backend OpenGL context current for the attached graphics surface.
+    /// @param graphicsSurface Surface whose context is made current.
     /// @throws std::runtime_error when SDL cannot make the context current.
-    void makeContextCurrent()
+    void makeContextCurrent(AttachedGraphicsSurface const &graphicsSurface)
     {
-        if (!SDL_GL_MakeCurrent(graphicsSurface.platformWindow, renderingContext))
+        if (!SDL_GL_MakeCurrent(graphicsSurface.graphicsSurface.platformWindow,
+                                graphicsSurface.renderingContext))
         {
             throw platformError("Failed to make OpenGL context current");
         }
+    }
+
+    /// @brief Returns the active Graphics Surface for frame commands.
+    /// @return Active surface state.
+    /// @throws std::runtime_error when no Graphics Surface is attached.
+    AttachedGraphicsSurface &activeGraphicsSurface()
+    {
+        auto graphicsSurfaceIterator =
+            graphicsSurfaceByWindowIdentifier.find(activeWindowIdentifier.value);
+
+        if (graphicsSurfaceIterator == graphicsSurfaceByWindowIdentifier.end())
+        {
+            throw std::runtime_error(
+                "Renderer must have an attached Graphics Surface before drawing.");
+        }
+
+        return graphicsSurfaceIterator->second;
+    }
+
+    /// @brief Releases the OpenGL context and graphics surface of an attached Graphics Surface.
+    /// @param attachedGraphicsSurface Surface to release.
+    void releaseAttachedGraphicsSurface(AttachedGraphicsSurface &attachedGraphicsSurface) noexcept
+    {
+        if (attachedGraphicsSurface.renderingContext != nullptr)
+        {
+            if (attachedGraphicsSurface.graphicsSurface.platformWindow != nullptr)
+            {
+                (void)SDL_GL_MakeCurrent(attachedGraphicsSurface.graphicsSurface.platformWindow,
+                                         nullptr);
+            }
+            (void)SDL_GL_DestroyContext(attachedGraphicsSurface.renderingContext);
+            attachedGraphicsSurface.renderingContext = nullptr;
+        }
+
+        GraphicsSurfaceFactory::releaseGraphicsSurface(attachedGraphicsSurface.graphicsSurface);
     }
 };
 
@@ -117,51 +162,69 @@ OpenGLRenderingBackend::~OpenGLRenderingBackend()
 void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
                                                    WindowIdentifier windowIdentifier)
 {
-    if (implementation->isGraphicsSurfaceAttached)
+    if (implementation->graphicsSurfaceByWindowIdentifier.contains(windowIdentifier.value))
     {
-        throw std::runtime_error("Renderer already has an attached Graphics Surface.");
+        throw std::runtime_error(
+            "Renderer already has a Graphics Surface attached for this Window Identifier.");
     }
 
-    implementation->graphicsSurface =
+    Implementation::AttachedGraphicsSurface attachedGraphicsSurface;
+    attachedGraphicsSurface.graphicsSurface =
         GraphicsSurfaceFactory::createOpenGLGraphicsSurface(windowSystem, windowIdentifier);
-    implementation->windowIdentifier = windowIdentifier;
-    implementation->renderingContext =
-        SDL_GL_CreateContext(implementation->graphicsSurface.platformWindow);
 
-    if (implementation->renderingContext == nullptr)
+    if (!implementation->graphicsSurfaceByWindowIdentifier.empty())
     {
+        Implementation::AttachedGraphicsSurface const &sharedGraphicsSurface =
+            implementation->graphicsSurfaceByWindowIdentifier.begin()->second;
+        implementation->makeContextCurrent(sharedGraphicsSurface);
+
+        if (!SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1))
+        {
+            implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
+            throw platformError("Failed to enable OpenGL context resource sharing");
+        }
+    }
+
+    attachedGraphicsSurface.renderingContext =
+        SDL_GL_CreateContext(attachedGraphicsSurface.graphicsSurface.platformWindow);
+
+    if (attachedGraphicsSurface.renderingContext == nullptr)
+    {
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw platformError("Failed to create OpenGL context");
     }
 
-    implementation->isGraphicsSurfaceAttached = true;
-
     try
     {
-        implementation->makeContextCurrent();
+        implementation->makeContextCurrent(attachedGraphicsSurface);
     }
     catch (...)
     {
-        shutdown();
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw;
     }
 
     if (gladLoadGL(loadOpenGLProcedure) == 0)
     {
-        shutdown();
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw std::runtime_error("Failed to load OpenGL procedures with GLAD.");
     }
 
     if (GLAD_GL_VERSION_4_6 == 0)
     {
-        shutdown();
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw std::runtime_error("OpenGL 4.6 core profile is required but not available.");
     }
 
     if (!SDL_GL_SetSwapInterval(swapIntervalForPresentationMode(presentationMode)))
     {
-        shutdown();
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
         throw platformError("Failed to set OpenGL Presentation Mode");
     }
+
+    implementation->activeWindowIdentifier = windowIdentifier;
+    implementation->graphicsSurfaceByWindowIdentifier.emplace(windowIdentifier.value,
+                                                              std::move(attachedGraphicsSurface));
 
     // Initializes context, surface size, and viewport; drawability is handled by regular frame
     // calls.
@@ -170,75 +233,102 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
     logger.info("OpenGL 4.6 core Rendering Backend has been initialized.");
 }
 
+void OpenGLRenderingBackend::detachGraphicsSurface(WindowIdentifier windowIdentifier) noexcept
+{
+    auto graphicsSurfaceIterator =
+        implementation->graphicsSurfaceByWindowIdentifier.find(windowIdentifier.value);
+
+    if (graphicsSurfaceIterator == implementation->graphicsSurfaceByWindowIdentifier.end())
+    {
+        return;
+    }
+
+    Implementation::AttachedGraphicsSurface &attachedGraphicsSurface =
+        graphicsSurfaceIterator->second;
+
+    implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
+    implementation->graphicsSurfaceByWindowIdentifier.erase(graphicsSurfaceIterator);
+
+    if (implementation->activeWindowIdentifier == windowIdentifier)
+    {
+        implementation->activeWindowIdentifier =
+            implementation->graphicsSurfaceByWindowIdentifier.empty()
+                ? WindowIdentifier{}
+                : WindowIdentifier{
+                      implementation->graphicsSurfaceByWindowIdentifier.begin()->first};
+    }
+
+    implementation->isCurrentFrameDrawable = false;
+}
+
 void OpenGLRenderingBackend::handleWindowEvent(WindowEvent const &windowEvent)
 {
-    if (!implementation->isGraphicsSurfaceAttached)
-    {
-        return;
-    }
-
     GraphicsSurfaceSizeChanged const *graphicsSurfaceSizeChanged{
         std::get_if<GraphicsSurfaceSizeChanged>(&windowEvent)};
-    if (graphicsSurfaceSizeChanged == nullptr ||
-        graphicsSurfaceSizeChanged->windowIdentifier != implementation->windowIdentifier)
+    if (graphicsSurfaceSizeChanged == nullptr)
     {
         return;
     }
 
-    implementation->pendingGraphicsSurfaceSize = graphicsSurfaceSizeChanged->graphicsSurfaceSize;
+    auto graphicsSurfaceIterator = implementation->graphicsSurfaceByWindowIdentifier.find(
+        graphicsSurfaceSizeChanged->windowIdentifier.value);
+
+    if (graphicsSurfaceIterator == implementation->graphicsSurfaceByWindowIdentifier.end())
+    {
+        return;
+    }
+
+    graphicsSurfaceIterator->second.pendingGraphicsSurfaceSize =
+        graphicsSurfaceSizeChanged->graphicsSurfaceSize;
 }
 
 bool OpenGLRenderingBackend::beginFrame()
 {
-    if (!implementation->isGraphicsSurfaceAttached)
-    {
-        throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
-    }
+    Implementation::AttachedGraphicsSurface &activeGraphicsSurface =
+        implementation->activeGraphicsSurface();
 
-    implementation->makeContextCurrent();
+    implementation->makeContextCurrent(activeGraphicsSurface);
 
     // Update the engine state with the pending graphics surface size, if available.
-    if (implementation->pendingGraphicsSurfaceSize.has_value())
+    if (activeGraphicsSurface.pendingGraphicsSurfaceSize.has_value())
     {
-        implementation->graphicsSurface.graphicsSurfaceSize =
-            *implementation->pendingGraphicsSurfaceSize;
-        implementation->pendingGraphicsSurfaceSize.reset();
+        activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize =
+            *activeGraphicsSurface.pendingGraphicsSurfaceSize;
+        activeGraphicsSurface.pendingGraphicsSurfaceSize.reset();
     }
     else
     {
-        implementation->graphicsSurface.graphicsSurfaceSize =
-            queryGraphicsSurfaceSize(implementation->graphicsSurface.platformWindow);
+        activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize =
+            queryGraphicsSurfaceSize(activeGraphicsSurface.graphicsSurface.platformWindow);
     }
 
     implementation->isCurrentFrameDrawable =
-        implementation->graphicsSurface.graphicsSurfaceSize.width > 0 &&
-        implementation->graphicsSurface.graphicsSurfaceSize.height > 0;
+        activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize.width > 0 &&
+        activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize.height > 0;
 
     if (!implementation->isCurrentFrameDrawable)
     {
         return false;
     }
 
-    glViewport(0, 0,
-               static_cast<GLsizei>(implementation->graphicsSurface.graphicsSurfaceSize.width),
-               static_cast<GLsizei>(implementation->graphicsSurface.graphicsSurfaceSize.height));
+    glViewport(
+        0, 0, static_cast<GLsizei>(activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize.width),
+        static_cast<GLsizei>(activeGraphicsSurface.graphicsSurface.graphicsSurfaceSize.height));
 
     return true;
 }
 
 void OpenGLRenderingBackend::clear(LinearColor const &color)
 {
-    if (!implementation->isGraphicsSurfaceAttached)
-    {
-        throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
-    }
+    Implementation::AttachedGraphicsSurface &activeGraphicsSurface =
+        implementation->activeGraphicsSurface();
 
     if (!implementation->isCurrentFrameDrawable)
     {
         return;
     }
 
-    implementation->makeContextCurrent();
+    implementation->makeContextCurrent(activeGraphicsSurface);
 
     glClearColor(color.red, color.green, color.blue, color.alpha);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -246,19 +336,17 @@ void OpenGLRenderingBackend::clear(LinearColor const &color)
 
 void OpenGLRenderingBackend::present()
 {
-    if (!implementation->isGraphicsSurfaceAttached)
-    {
-        throw std::runtime_error("Renderer must have an attached Graphics Surface before drawing.");
-    }
+    Implementation::AttachedGraphicsSurface &activeGraphicsSurface =
+        implementation->activeGraphicsSurface();
 
     if (!implementation->isCurrentFrameDrawable)
     {
         return;
     }
 
-    implementation->makeContextCurrent();
+    implementation->makeContextCurrent(activeGraphicsSurface);
 
-    if (!SDL_GL_SwapWindow(implementation->graphicsSurface.platformWindow))
+    if (!SDL_GL_SwapWindow(activeGraphicsSurface.graphicsSurface.platformWindow))
     {
         throw platformError("Failed to present OpenGL frame");
     }
@@ -266,22 +354,15 @@ void OpenGLRenderingBackend::present()
 
 void OpenGLRenderingBackend::shutdown() noexcept
 {
-    if (implementation->renderingContext != nullptr)
+    for (auto &[windowIdentifier, attachedGraphicsSurface] :
+         implementation->graphicsSurfaceByWindowIdentifier)
     {
-        if (implementation->graphicsSurface.platformWindow != nullptr)
-        {
-            (void)SDL_GL_MakeCurrent(implementation->graphicsSurface.platformWindow, nullptr);
-        }
-
-        (void)SDL_GL_DestroyContext(implementation->renderingContext);
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
     }
 
-    implementation->renderingContext = nullptr;
-    implementation->graphicsSurface = {};
-    implementation->windowIdentifier = {};
-    implementation->isGraphicsSurfaceAttached = false;
+    implementation->graphicsSurfaceByWindowIdentifier.clear();
+    implementation->activeWindowIdentifier = {};
     implementation->isCurrentFrameDrawable = false;
-    implementation->pendingGraphicsSurfaceSize.reset();
 }
 
 } // namespace Engine::Rendering::Internal

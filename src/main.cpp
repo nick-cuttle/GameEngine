@@ -58,12 +58,18 @@ int main()
             Engine::WindowCloseRequested const *windowCloseRequestedEvent{
                 std::get_if<Engine::WindowCloseRequested>(&windowEvent)};
 
-            bool const isPrimaryWindowCloseRequested{windowCloseRequestedEvent != nullptr &&
-                                                     windowCloseRequestedEvent->windowIdentifier ==
-                                                         primaryWindow};
-            if (isPrimaryWindowCloseRequested)
+            if (windowCloseRequestedEvent != nullptr)
             {
-                isRunning = false;
+                if (windowCloseRequestedEvent->windowIdentifier != primaryWindow)
+                {
+                    renderer.detachGraphicsSurface(windowCloseRequestedEvent->windowIdentifier);
+                }
+
+                if (windowSystem.handleDefaultCloseRequest(
+                        windowCloseRequestedEvent->windowIdentifier))
+                {
+                    isRunning = false;
+                }
             }
         }
 

@@ -167,6 +167,10 @@ struct WindowSystem::Implementation
     bool isInitialized = false;
     /// @brief Managed SDL windows keyed by the engine-visible SDL window identifier.
     std::unordered_map<std::uint32_t, SDL_Window *> windowByIdentifier;
+    /// @brief Renderer-owned Graphics Surface attachment counts keyed by Window Identifier.
+    std::unordered_map<std::uint32_t, std::uint32_t> attachedSurfaceCountByIdentifier;
+    /// @brief Current Primary Window identifier, or zero when none exists.
+    WindowIdentifier primaryWindowIdentifier{};
 };
 
 WindowSystem::WindowSystem() : implementation(std::make_unique<Implementation>())
@@ -210,6 +214,19 @@ void WindowSystem::shutdown()
 }
 
 WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &configuration)
+{
+    if (implementation->primaryWindowIdentifier.value != 0)
+    {
+        throw std::runtime_error("Primary window has already been created.");
+    }
+
+    WindowIdentifier windowIdentifier = createWindow(configuration);
+    implementation->primaryWindowIdentifier = windowIdentifier;
+
+    return windowIdentifier;
+}
+
+WindowIdentifier WindowSystem::createWindow(WindowConfiguration const &configuration)
 {
     if (!implementation->isInitialized)
     {
@@ -293,6 +310,51 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
     return returnedWindowIdentifier;
 }
 
+void WindowSystem::destroyWindow(WindowIdentifier windowIdentifier)
+{
+    auto windowIterator = implementation->windowByIdentifier.find(windowIdentifier.value);
+
+    if (windowIterator == implementation->windowByIdentifier.end())
+    {
+        throw std::invalid_argument("Cannot destroy an unknown Window Identifier.");
+    }
+
+    auto attachedSurfaceCountIterator =
+        implementation->attachedSurfaceCountByIdentifier.find(windowIdentifier.value);
+
+    if (attachedSurfaceCountIterator != implementation->attachedSurfaceCountByIdentifier.end() &&
+        attachedSurfaceCountIterator->second > 0)
+    {
+        throw std::runtime_error(
+            "Cannot destroy a window while a Graphics Surface is still attached.");
+    }
+
+    SDL_DestroyWindow(windowIterator->second);
+    implementation->windowByIdentifier.erase(windowIterator);
+    implementation->attachedSurfaceCountByIdentifier.erase(windowIdentifier.value);
+
+    if (implementation->primaryWindowIdentifier == windowIdentifier)
+    {
+        implementation->primaryWindowIdentifier = {};
+    }
+}
+
+bool WindowSystem::handleDefaultCloseRequest(WindowIdentifier windowIdentifier)
+{
+    if (windowIdentifier == implementation->primaryWindowIdentifier)
+    {
+        return true;
+    }
+
+    destroyWindow(windowIdentifier);
+    return false;
+}
+
+bool WindowSystem::isWindowManaged(WindowIdentifier windowIdentifier) const
+{
+    return implementation->windowByIdentifier.contains(windowIdentifier.value);
+}
+
 WindowEventPollResult WindowSystem::pollWindowEvents()
 {
     WindowEventPollResult pollResult;
@@ -351,6 +413,37 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
     return pollResult;
 }
 
+void WindowSystem::registerAttachedGraphicsSurface(WindowIdentifier windowIdentifier)
+{
+    if (!isWindowManaged(windowIdentifier))
+    {
+        throw std::invalid_argument(
+            "Cannot attach a Graphics Surface for an unknown Window Identifier.");
+    }
+
+    ++implementation->attachedSurfaceCountByIdentifier[windowIdentifier.value];
+}
+
+void WindowSystem::unregisterAttachedGraphicsSurface(WindowIdentifier windowIdentifier) noexcept
+{
+    auto attachedSurfaceCountIterator =
+        implementation->attachedSurfaceCountByIdentifier.find(windowIdentifier.value);
+
+    if (attachedSurfaceCountIterator == implementation->attachedSurfaceCountByIdentifier.end())
+    {
+        return;
+    }
+
+    // Detach the Graphics Surface from the window if it is the last attached surface.
+    if (attachedSurfaceCountIterator->second > 1)
+    {
+        --attachedSurfaceCountIterator->second;
+        return;
+    }
+
+    implementation->attachedSurfaceCountByIdentifier.erase(attachedSurfaceCountIterator);
+}
+
 namespace Rendering::Internal
 {
 
@@ -382,10 +475,24 @@ GraphicsSurfaceFactory::createOpenGLGraphicsSurface(WindowSystem &windowSystem,
         throw std::runtime_error(SDL_GetError());
     }
 
+    windowSystem.registerAttachedGraphicsSurface(windowIdentifier);
+
     return PlatformGraphicsSurface{
-        windowIterator->second,
+        &windowSystem, windowIdentifier, windowIterator->second,
         GraphicsSurfaceSize{static_cast<std::uint32_t>(std::max(graphicsSurfaceWidth, 0)),
                             static_cast<std::uint32_t>(std::max(graphicsSurfaceHeight, 0))}};
+}
+
+void GraphicsSurfaceFactory::releaseGraphicsSurface(
+    PlatformGraphicsSurface &graphicsSurface) noexcept
+{
+    if (graphicsSurface.windowSystem != nullptr)
+    {
+        graphicsSurface.windowSystem->unregisterAttachedGraphicsSurface(
+            graphicsSurface.windowIdentifier);
+    }
+
+    graphicsSurface = {};
 }
 
 } // namespace Rendering::Internal
@@ -403,6 +510,8 @@ void WindowSystem::releaseResources() noexcept
     }
 
     implementation->windowByIdentifier.clear();
+    implementation->attachedSurfaceCountByIdentifier.clear();
+    implementation->primaryWindowIdentifier = {};
 
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
     implementation->isInitialized = false;

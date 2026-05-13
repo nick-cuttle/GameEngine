@@ -26,6 +26,10 @@ public:
     virtual void attachGraphicsSurface(WindowSystem &windowSystem,
                                        WindowIdentifier windowIdentifier) = 0;
 
+    /// @brief Detaches backend state from a Window System managed graphics surface.
+    /// @param windowIdentifier Engine-owned target window identifier.
+    virtual void detachGraphicsSurface(WindowIdentifier windowIdentifier) noexcept = 0;
+
     /// @brief Records a Window Event that may affect backend-owned surface state.
     /// @param windowEvent Engine-owned Window Event observed by the Window System.
     virtual void handleWindowEvent(WindowEvent const &windowEvent) = 0;

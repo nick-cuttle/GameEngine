@@ -56,6 +56,13 @@ TEST_CASE("Renderer", "[unit][rendering][renderer]")
         REQUIRE_NOTHROW(renderer.shutdown());
     }
 
+    SECTION("graphics surface detach is idempotent before renderer initialization")
+    {
+        Engine::Renderer renderer;
+
+        REQUIRE_NOTHROW(renderer.detachGraphicsSurface(Engine::WindowIdentifier{24}));
+    }
+
     SECTION("vulkan selection fails without a Vulkan dependency")
     {
         Engine::Renderer renderer;

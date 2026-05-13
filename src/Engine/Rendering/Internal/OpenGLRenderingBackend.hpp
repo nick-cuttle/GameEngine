@@ -33,6 +33,9 @@ public:
     void attachGraphicsSurface(WindowSystem &windowSystem,
                                WindowIdentifier windowIdentifier) override;
 
+    /// @copydoc RenderingBackend::detachGraphicsSurface
+    void detachGraphicsSurface(WindowIdentifier windowIdentifier) noexcept override;
+
     /// @copydoc RenderingBackend::handleWindowEvent
     void handleWindowEvent(WindowEvent const &windowEvent) override;
 

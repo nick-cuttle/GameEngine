@@ -4,12 +4,14 @@
  */
 
 #include <Engine/Core/Logger.hpp>
+#include <Engine/Rendering/Internal/GraphicsSurfaceFactory.hpp>
 #include <Engine/Windowing/WindowSystem.hpp>
 
 #include <SDL3/SDL.h>
 #include <SpdlogTestGuard.hpp>
 #include <TestTempDirectory.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cstdint>
 #include <limits>
@@ -157,6 +159,72 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         REQUIRE(windowCloseRequested->windowIdentifier.value == primaryWindow.value);
 
         windowSystem.shutdown();
+    }
+
+    SECTION("window system manages more than one stable window identifier")
+    {
+        Engine::WindowConfiguration configuration;
+        configuration.isVisible = false;
+
+        Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(configuration);
+        Engine::WindowIdentifier secondaryWindow = windowSystem.createWindow(configuration);
+        (void)windowSystem.pollWindowEvents();
+
+        REQUIRE(primaryWindow.value != 0);
+        REQUIRE(secondaryWindow.value != 0);
+        REQUIRE(primaryWindow != secondaryWindow);
+        REQUIRE(windowSystem.isWindowManaged(primaryWindow));
+        REQUIRE(windowSystem.isWindowManaged(secondaryWindow));
+
+        windowSystem.destroyWindow(secondaryWindow);
+
+        REQUIRE(windowSystem.isWindowManaged(primaryWindow));
+        REQUIRE_FALSE(windowSystem.isWindowManaged(secondaryWindow));
+    }
+
+    SECTION("default close policy closes only non-primary windows")
+    {
+        Engine::WindowConfiguration configuration;
+        configuration.isVisible = false;
+
+        Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(configuration);
+        Engine::WindowIdentifier secondaryWindow = windowSystem.createWindow(configuration);
+        (void)windowSystem.pollWindowEvents();
+
+        bool const secondaryRequestedShutdown =
+            windowSystem.handleDefaultCloseRequest(secondaryWindow);
+
+        REQUIRE_FALSE(secondaryRequestedShutdown);
+        REQUIRE(windowSystem.isWindowManaged(primaryWindow));
+        REQUIRE_FALSE(windowSystem.isWindowManaged(secondaryWindow));
+
+        bool const primaryRequestedShutdown = windowSystem.handleDefaultCloseRequest(primaryWindow);
+
+        REQUIRE(primaryRequestedShutdown);
+        REQUIRE(windowSystem.isWindowManaged(primaryWindow));
+    }
+
+    SECTION("window destruction is prevented while a graphics surface is attached")
+    {
+        Engine::WindowConfiguration configuration;
+        configuration.isVisible = false;
+
+        Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(configuration);
+        (void)windowSystem.pollWindowEvents();
+
+        Engine::Rendering::Internal::PlatformGraphicsSurface graphicsSurface =
+            Engine::Rendering::Internal::GraphicsSurfaceFactory::createOpenGLGraphicsSurface(
+                windowSystem, primaryWindow);
+
+        REQUIRE_THROWS_WITH(
+            windowSystem.destroyWindow(primaryWindow),
+            Catch::Matchers::Equals(
+                "Cannot destroy a window while a Graphics Surface is still attached."));
+
+        Engine::Rendering::Internal::GraphicsSurfaceFactory::releaseGraphicsSurface(
+            graphicsSurface);
+
+        REQUIRE_NOTHROW(windowSystem.destroyWindow(primaryWindow));
     }
 
     SECTION("window size uses explicit unsigned dimensions")

@@ -90,6 +90,11 @@ public:
     ///         System.
     void attachGraphicsSurface(WindowSystem &windowSystem, WindowIdentifier windowIdentifier);
 
+    /// @brief Detaches the Renderer from a Window System managed graphics surface.
+    /// @param windowIdentifier Engine-owned identifier of the target window.
+    /// @details Detach before destroying the Window System window that owns the Graphics Surface.
+    void detachGraphicsSurface(WindowIdentifier windowIdentifier) noexcept;
+
     /// @brief Records a Window Event that may affect the attached graphics surface.
     /// @param windowEvent Engine-owned Window Event observed by the Window System.
     void handleWindowEvent(WindowEvent const &windowEvent);
