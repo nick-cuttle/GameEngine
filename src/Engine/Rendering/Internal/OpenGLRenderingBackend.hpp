@@ -33,8 +33,11 @@ public:
     void attachGraphicsSurface(WindowSystem &windowSystem,
                                WindowIdentifier windowIdentifier) override;
 
+    /// @copydoc RenderingBackend::handleWindowEvent
+    void handleWindowEvent(WindowEvent const &windowEvent) override;
+
     /// @copydoc RenderingBackend::beginFrame
-    void beginFrame() override;
+    bool beginFrame() override;
 
     /// @copydoc RenderingBackend::clear
     void clear(LinearColor const &color) override;

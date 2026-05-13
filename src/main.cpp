@@ -20,30 +20,31 @@ int main()
     engine.initialize();
 
     Engine::WindowSystem windowSystem;
-    auto windowLogger = engine.loggingSystem.createSubsystemLogger("WindowSystem");
+    auto windowLogger{engine.loggingSystem.createSubsystemLogger("WindowSystem")};
     windowSystem.initialize(windowLogger);
 
     Engine::WindowConfiguration windowConfiguration;
+    windowConfiguration.isResizable = true;
     windowConfiguration.graphicsSurfaceCapability = Engine::GraphicsSurfaceCapability::OpenGL;
 
-    Engine::WindowIdentifier primaryWindow = windowSystem.createPrimaryWindow(windowConfiguration);
+    Engine::WindowIdentifier primaryWindow{windowSystem.createPrimaryWindow(windowConfiguration)};
 
     Engine::Renderer renderer;
     Engine::RendererConfiguration rendererConfiguration;
     rendererConfiguration.renderingBackendSelection = Engine::RenderingBackendSelection::OpenGL;
     rendererConfiguration.presentationMode = Engine::PresentationMode::VerticalSynchronization;
 
-    auto rendererLogger = engine.loggingSystem.createSubsystemLogger("Renderer");
+    auto rendererLogger{engine.loggingSystem.createSubsystemLogger("Renderer")};
     renderer.initialize(rendererConfiguration, rendererLogger);
     renderer.attachGraphicsSurface(windowSystem, primaryWindow);
 
     Engine::LinearColor clearColor{.red = 0.02F, .green = 0.05F, .blue = 0.09F, .alpha = 1.0F};
 
-    bool isRunning = true;
+    bool isRunning{true};
 
     while (isRunning)
     {
-        Engine::WindowEventPollResult windowEventPollResult = windowSystem.pollWindowEvents();
+        Engine::WindowEventPollResult windowEventPollResult{windowSystem.pollWindowEvents()};
 
         if (windowEventPollResult.isApplicationQuitRequested)
         {
@@ -52,12 +53,14 @@ int main()
 
         for (Engine::WindowEvent const &windowEvent : windowEventPollResult.windowEvents)
         {
-            Engine::WindowCloseRequested const *windowCloseRequestedEvent =
-                std::get_if<Engine::WindowCloseRequested>(&windowEvent);
+            renderer.handleWindowEvent(windowEvent);
 
-            bool const isPrimaryWindowCloseRequested =
-                windowCloseRequestedEvent != nullptr &&
-                windowCloseRequestedEvent->windowIdentifier == primaryWindow;
+            Engine::WindowCloseRequested const *windowCloseRequestedEvent{
+                std::get_if<Engine::WindowCloseRequested>(&windowEvent)};
+
+            bool const isPrimaryWindowCloseRequested{windowCloseRequestedEvent != nullptr &&
+                                                     windowCloseRequestedEvent->windowIdentifier ==
+                                                         primaryWindow};
             if (isPrimaryWindowCloseRequested)
             {
                 isRunning = false;
@@ -66,9 +69,13 @@ int main()
 
         if (isRunning)
         {
-            renderer.beginFrame();
-            renderer.clear(clearColor);
-            renderer.present();
+            bool const isFrameDrawable{renderer.beginFrame()};
+
+            if (isFrameDrawable)
+            {
+                renderer.clear(clearColor);
+                renderer.present();
+            }
         }
     }
 
