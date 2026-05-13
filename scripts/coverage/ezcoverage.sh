@@ -2,22 +2,24 @@
 
 set -e
 
-BUILD_TYPE=""
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+. "$SCRIPT_DIR/../build/buildHelper.sh"
+. "$SCRIPT_DIR/../test/testHelper.sh"
+
+BUILD_DIR=""
 COVERAGE_BUILD_ROOT="build/Coverage"
 COVERAGE_DIR="coverage"
 TEST_PATTERN=""
 LABEL=""
 OPEN_REPORT=0
-COLOR_RESET="$(printf '\033[0m')"
-COLOR_BLUE="$(printf '\033[1;34m')"
-COLOR_GREEN="$(printf '\033[1;32m')"
 
-export CLICOLOR_FORCE=1
 export CTEST_COLOR_DIAGNOSTICS=1
 
 usage() {
-    echo "Usage: ./scripts/ezcoverage.sh [Debug|Release] [options]"
-    echo "With no build type, runs Debug first, then Release, and combines the report."
+    echo "Usage: ezcoverage.sh [build-dir] [options]"
+    echo "Example: ezcoverage.sh build/Coverage/Debug"
+    echo "With no build directory, runs build/Coverage/Debug first, then build/Coverage/Release, and combines the report."
+    echo "The CMake build type is inferred from Debug or Release in the build directory name."
     echo ""
     echo "Builds the tests with GCC coverage instrumentation, runs them with CTest,"
     echo "and generates text plus HTML coverage reports with gcovr."
@@ -29,12 +31,9 @@ usage() {
     echo "  --help            Show this help"
 }
 
+# Parse parameters
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        Debug|Release)
-            BUILD_TYPE="$1"
-            shift
-            ;;
         --test)
             if [ -z "$2" ]; then
                 echo "Error: --test requires a regex"
@@ -59,77 +58,72 @@ while [ "$#" -gt 0 ]; do
             usage
             exit 0
             ;;
-        *)
+        -*)
             echo "Unsupported option: $1"
             usage
             exit 1
             ;;
+        *)
+            if [ -n "$BUILD_DIR" ]; then
+                echo "Unsupported argument: $1"
+                usage
+                exit 1
+            fi
+            BUILD_DIR="$1"
+            shift
+            ;;
     esac
 done
 
+# Check gcovr installed before doing any work
 if ! command -v gcovr >/dev/null 2>&1; then
     echo "Error: gcovr is required but was not found on PATH."
     echo "Install it with: python -m pip install gcovr"
     exit 1
 fi
 
-if uname -s | grep Linux >/dev/null; then
-    GENERATOR="Unix Makefiles"
-elif uname -s | grep -E 'MSYS|MINGW' >/dev/null; then
-    GENERATOR="MinGW Makefiles"
-else
-    echo "Unsupported operating system!"
-    exit 1
-fi
+init_build_helper
 
-JOBS="$(nproc 2>/dev/null || echo 8)"
 GCOVR_OBJECT_ARGS=""
 
 run_coverage() {
-    BUILD_TYPE="$1"
-    BUILD_DIR="$COVERAGE_BUILD_ROOT/$BUILD_TYPE"
 
-    printf "%s==> Configuring %s coverage build%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
-    cmake \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-        -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-        -DCMAKE_CXX_FLAGS="--coverage" \
-        -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
-        -DCMAKE_SHARED_LINKER_FLAGS="--coverage" \
-        -DBUILD_TESTS=ON \
-        -G "$GENERATOR" \
-        -S . \
-        -B "$BUILD_DIR"
+    # infer build type from directory name
+    BUILD_DIR="$1"
+    BUILD_TYPE=$(infer_build_type_from_dir "$BUILD_DIR") || exit 1
+    CONFIGURE_LOG="$BUILD_DIR/ezcoverage-configure.log"
+    # cmake flags
+    EXTRA_CMAKE_ARGS="-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_SHARED_LINKER_FLAGS=--coverage -DBUILD_TESTS=ON"
 
-    printf "%s==> Building %s coverage unit tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
-    cmake --build "$BUILD_DIR" --target EngineUnitTests -- -j"$JOBS"
+    # configure build
+    print_status "$COLOR_BLUE" "Configuring $BUILD_DIR coverage build ($BUILD_TYPE)"
+    if ! configure_build "$BUILD_DIR" "$BUILD_TYPE" "$CONFIGURE_LOG" "$EXTRA_CMAKE_ARGS"; then
+        print_status "$COLOR_RED" "CMake configuration failed for $BUILD_DIR. Check the log for details: $CONFIGURE_LOG"
+        exit 1
+    fi
 
+    # Remove old counters after building and before running tests so gcovr reports only this run.
     find "$BUILD_DIR" -name '*.gcda' -delete
 
-    printf "%s==> Running %s coverage tests%s\n" "$COLOR_BLUE" "$BUILD_TYPE" "$COLOR_RESET"
-    if [ -n "$TEST_PATTERN" ] && [ -n "$LABEL" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN" -L "$LABEL"
-    elif [ -n "$TEST_PATTERN" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -R "$TEST_PATTERN"
-    elif [ -n "$LABEL" ]; then
-        ctest --test-dir "$BUILD_DIR" --output-on-failure -L "$LABEL"
-    else
-        ctest --test-dir "$BUILD_DIR" --output-on-failure
-    fi
+    # build and run tests
+    print_status "$COLOR_BLUE" "Running $BUILD_DIR coverage tests"
+    run_eztest "$BUILD_DIR" "$TEST_PATTERN" "$LABEL"
 
     GCOVR_OBJECT_ARGS="$GCOVR_OBJECT_ARGS --object-directory $BUILD_DIR"
 }
 
-if [ -n "$BUILD_TYPE" ]; then
-    run_coverage "$BUILD_TYPE"
+if [ -n "$BUILD_DIR" ]; then
+    run_coverage "$BUILD_DIR"
 else
-    run_coverage Debug
-    run_coverage Release
+    # default to Debug and Release if build dir not specified.
+    run_coverage "$COVERAGE_BUILD_ROOT/Debug"
+    run_coverage "$COVERAGE_BUILD_ROOT/Release"
 fi
 
 mkdir -p "$COVERAGE_DIR"
 
-printf "%s==> Generating coverage reports%s\n" "$COLOR_BLUE" "$COLOR_RESET"
+# Run report with gcovr
+print_status "$COLOR_BLUE" "Generating coverage reports"
 # shellcheck disable=SC2086
 gcovr \
     --root . \
@@ -140,8 +134,9 @@ gcovr \
     --html-details "$COVERAGE_DIR/index.html" \
     --cobertura "$COVERAGE_DIR/coverage.xml"
 
-printf "%s==> Coverage report written to %s/index.html%s\n" "$COLOR_GREEN" "$COVERAGE_DIR" "$COLOR_RESET"
+print_status "$COLOR_GREEN" "Coverage report written to $COVERAGE_DIR/index.html"
 
+# Open report
 if [ "$OPEN_REPORT" -eq 1 ]; then
     if command -v xdg-open >/dev/null 2>&1; then
         xdg-open "$COVERAGE_DIR/index.html"

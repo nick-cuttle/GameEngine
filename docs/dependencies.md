@@ -54,7 +54,8 @@ test -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" && echo "vcpkg ok"
 With `VCPKG_ROOT` set, the helper script automatically enables vcpkg manifest mode:
 
 ```bash
-./scripts/ezbuild.sh Debug
+source scripts/core/ezprepare.sh
+ezbuild.sh build/Debug
 ```
 
 On MSYS/MinGW, the script defaults these triplets:
@@ -93,14 +94,16 @@ Arch:
 
 ```bash
 sudo pacman -S cmake gcc ninja sdl3 fmt spdlog catch2
-./scripts/ezbuild.sh Debug
+source scripts/core/ezprepare.sh
+ezbuild.sh build/Debug
 ```
 
 Ubuntu/Debian, when SDL3 packages are available:
 
 ```bash
 sudo apt install cmake g++ ninja-build libsdl3-dev libfmt-dev libspdlog-dev catch2
-./scripts/ezbuild.sh Debug
+source scripts/core/ezprepare.sh
+ezbuild.sh build/Debug
 ```
 
 If a distro package is missing or too old, leave `ENGINE_FETCH_DEPENDENCIES=ON` and CMake will
