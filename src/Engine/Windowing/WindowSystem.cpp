@@ -260,8 +260,7 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
             {
                 std::string const eventDescription = describePlatformEvent(event);
 
-                m_Logger.trace("Non-window event captured: {} ({})", eventDescription,
-                               eventType);
+                m_Logger.trace("Non-window event captured: {} ({})", eventDescription, eventType);
             }
 
             continue;
