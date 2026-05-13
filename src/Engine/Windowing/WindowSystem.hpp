@@ -82,6 +82,12 @@ struct WindowConfiguration
     bool isVisible = true;
     /// @brief Whether the desktop environment may resize the window interactively.
     bool isResizable = false;
+    /// @brief Whether the window should cover the desktop without entering exclusive fullscreen.
+    bool isBorderlessFullscreen = false;
+    /// @brief Whether the desktop environment should draw standard window decorations.
+    bool isDecorated = true;
+    /// @brief Whether the window should request a high-density drawable surface when available.
+    bool prefersHighDensity = false;
     /// @brief Renderer-facing graphics surface capability requested for this window.
     GraphicsSurfaceCapability graphicsSurfaceCapability = GraphicsSurfaceCapability::None;
 };

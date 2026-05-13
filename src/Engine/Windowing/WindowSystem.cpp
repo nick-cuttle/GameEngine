@@ -261,6 +261,21 @@ WindowIdentifier WindowSystem::createWindow(WindowConfiguration const &configura
         windowFlags |= SDL_WINDOW_RESIZABLE;
     }
 
+    if (configuration.isBorderlessFullscreen)
+    {
+        windowFlags |= SDL_WINDOW_FULLSCREEN;
+    }
+
+    if (!configuration.isDecorated)
+    {
+        windowFlags |= SDL_WINDOW_BORDERLESS;
+    }
+
+    if (configuration.prefersHighDensity)
+    {
+        windowFlags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+    }
+
     if (configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::OpenGL)
     {
         configureOpenGLWindowAttributes();

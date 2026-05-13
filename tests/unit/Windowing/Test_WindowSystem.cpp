@@ -105,7 +105,30 @@ TEST_CASE("WindowSystem", "[unit][windowing][window-system]")
         REQUIRE(configuration.size.height == 720);
         REQUIRE(configuration.isVisible);
         REQUIRE_FALSE(configuration.isResizable);
+        REQUIRE_FALSE(configuration.isBorderlessFullscreen);
+        REQUIRE(configuration.isDecorated);
+        REQUIRE_FALSE(configuration.prefersHighDensity);
         REQUIRE(configuration.graphicsSurfaceCapability == Engine::GraphicsSurfaceCapability::None);
+    }
+
+    SECTION("window creation applies fullscreen decoration and high-density configuration")
+    {
+        Engine::WindowConfiguration configuration;
+        configuration.isVisible = false;
+        configuration.isBorderlessFullscreen = true;
+        configuration.isDecorated = false;
+        configuration.prefersHighDensity = true;
+
+        Engine::WindowIdentifier windowIdentifier = windowSystem.createPrimaryWindow(configuration);
+        SDL_Window *platformWindow = SDL_GetWindowFromID(windowIdentifier.value);
+
+        REQUIRE(platformWindow != nullptr);
+
+        SDL_WindowFlags const platformWindowFlags = SDL_GetWindowFlags(platformWindow);
+
+        REQUIRE((platformWindowFlags & SDL_WINDOW_FULLSCREEN) != 0U);
+        REQUIRE((platformWindowFlags & SDL_WINDOW_BORDERLESS) != 0U);
+        REQUIRE((platformWindowFlags & SDL_WINDOW_HIGH_PIXEL_DENSITY) != 0U);
     }
 
     SECTION("poll result starts empty")
