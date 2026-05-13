@@ -4,6 +4,7 @@
   "dependencies": [
     "catch2",
     "fmt",
+    "glad",
     "sdl3",
     "spdlog"
   ]

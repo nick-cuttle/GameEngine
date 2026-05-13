@@ -86,6 +86,13 @@ function(engine_find_or_fetch_spdlog)
 endfunction()
 
 function(engine_find_or_fetch_glad_gl_core)
+    find_package(glad CONFIG QUIET)
+
+    if(TARGET glad::glad AND NOT TARGET glad_gl_core_46)
+        add_library(glad_gl_core_46 INTERFACE IMPORTED)
+        target_link_libraries(glad_gl_core_46 INTERFACE glad::glad)
+    endif()
+
     if(NOT TARGET glad_gl_core_46 AND ENGINE_FETCH_DEPENDENCIES)
         FetchContent_Declare(
             glad

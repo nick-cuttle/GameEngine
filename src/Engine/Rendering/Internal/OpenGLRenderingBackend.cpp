@@ -8,7 +8,16 @@
 #include <Engine/Rendering/Internal/GraphicsSurfaceFactory.hpp>
 
 #include <SDL3/SDL.h>
+
+#if __has_include(<glad/gl.h>)
 #include <glad/gl.h>
+#define ENGINE_GLAD_GENERATOR_V2 1
+#elif __has_include(<glad/glad.h>)
+#include <glad/glad.h>
+#define ENGINE_GLAD_GENERATOR_V1 1
+#else
+#error "GLAD headers were not found."
+#endif
 
 #include <algorithm>
 #include <cstdint>
@@ -48,9 +57,17 @@ std::runtime_error platformError(std::string_view operationDescription)
 /// @brief Loads one OpenGL procedure through SDL for GLAD.
 /// @param procedureName OpenGL procedure name requested by GLAD.
 /// @return Loaded procedure address, or null when SDL cannot resolve it.
+#if ENGINE_GLAD_GENERATOR_V2
 GLADapiproc loadOpenGLProcedure(char const *procedureName)
+#else
+void *loadOpenGLProcedure(char const *procedureName)
+#endif
 {
+#if ENGINE_GLAD_GENERATOR_V2
     return reinterpret_cast<GLADapiproc>(SDL_GL_GetProcAddress(procedureName));
+#else
+    return reinterpret_cast<void *>(SDL_GL_GetProcAddress(procedureName));
+#endif
 }
 
 /// @brief Queries the drawable graphics surface size for a platform window.
@@ -145,7 +162,13 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
         throw;
     }
 
-    if (gladLoadGL(loadOpenGLProcedure) == 0)
+#if ENGINE_GLAD_GENERATOR_V2
+    int const gladLoadResult = gladLoadGL(loadOpenGLProcedure);
+#else
+    int const gladLoadResult = gladLoadGLLoader(loadOpenGLProcedure);
+#endif
+
+    if (gladLoadResult == 0)
     {
         shutdown();
         throw std::runtime_error("Failed to load OpenGL procedures with GLAD.");
