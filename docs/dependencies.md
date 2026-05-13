@@ -10,6 +10,7 @@ The normal recommendation is:
 
 - Windows with MSYS/MinGW: use vcpkg.
 - Linux: use distro packages when available.
+- macOS: use Homebrew packages when available, or vcpkg for stricter dependency pinning.
 - CI or strict version testing: use vcpkg or FetchContent for pinned dependency versions.
 
 ## Windows vcpkg Setup
@@ -108,6 +109,20 @@ ezbuild.sh build/Debug
 
 If a distro package is missing or too old, leave `ENGINE_FETCH_DEPENDENCIES=ON` and CMake will
 fetch the pinned dependency from source.
+
+## macOS Setup
+
+On macOS, Homebrew is the quickest local setup when packages are available:
+
+```bash
+brew install cmake ninja sdl3 fmt spdlog catch2
+source scripts/core/ezprepare.sh
+ezbuild.sh build/Debug
+```
+
+If you need the exact pinned dependency versions or a setup closer to CI, install vcpkg and set
+`VCPKG_ROOT` before running the helper scripts. The shared build helper supports macOS and prefers
+Ninja when it is installed.
 
 ## Direct CMake Configure
 

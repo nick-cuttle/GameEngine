@@ -38,6 +38,8 @@ init_build_helper() {
         BUILD_HELPER_GENERATOR="Ninja"
     elif echo "$BUILD_HELPER_SYSTEM_NAME" | grep Linux >/dev/null; then
         BUILD_HELPER_GENERATOR="Unix Makefiles"
+    elif echo "$BUILD_HELPER_SYSTEM_NAME" | grep Darwin >/dev/null; then
+        BUILD_HELPER_GENERATOR="Unix Makefiles"
     elif echo "$BUILD_HELPER_SYSTEM_NAME" | grep -E 'MSYS|MINGW' >/dev/null; then
         BUILD_HELPER_GENERATOR="MinGW Makefiles"
     else

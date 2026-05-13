@@ -50,3 +50,31 @@ endif()
 add_executable(GameEngine main.cpp)
 
 target_link_libraries(GameEngine PRIVATE Engine)
+
+install(
+    TARGETS Engine GameEngine
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Engine
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+        PATTERN "*.hpp"
+)
+
+install(
+    FILES
+        ${CMAKE_SOURCE_DIR}/README.md
+        ${CMAKE_SOURCE_DIR}/CONTEXT.md
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/docs/adr
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs
+    FILES_MATCHING
+        PATTERN "*.md"
+)

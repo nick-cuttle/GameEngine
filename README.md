@@ -15,9 +15,9 @@ For project vocabulary, subsystem boundaries, and architectural decisions, start
 - `clang-format` for `ezformat.sh`
 - `gcovr` for `ezcoverage.sh`
 
-The engine code targets Linux and Windows. The helper scripts prefer Ninja when it is available,
-then fall back to Unix Makefiles on Linux and MinGW Makefiles on MSYS or MinGW shells. Set
-`ENGINE_CMAKE_GENERATOR` to override the generated build system.
+The engine code targets Linux, Windows, and macOS. The helper scripts prefer Ninja when it is
+available, then fall back to Unix Makefiles on Linux/macOS and MinGW Makefiles on MSYS or MinGW
+shells. Set `ENGINE_CMAKE_GENERATOR` to override the generated build system.
 
 ## Helper Scripts
 
@@ -140,6 +140,47 @@ This builds Debug and Release variants while toggling `BUILD_TESTS` and
 `ENGINE_WARNINGS_AS_ERRORS`. Use `ezgaunlet.sh --build-root <dir>` to write the matrix builds
 outside the default `build/Gaunlet` directory.
 
+## Delivery
+
+Create an installable package for the current host:
+
+```bash
+ezdeliver.sh
+```
+
+The delivery helper builds `build/Deliver/Release`, installs the runtime, library, public headers,
+and docs into a staged package directory, then writes both `.tar.gz` and `.zip` archives under
+`build/Deliver/packages`. The archive name includes the engine version, operating system, and CPU
+architecture, for example `gameengine-0.1.0-windows-x86-64.zip`.
+
+Packages are built for the current host. Run `ezdeliver.sh` on Linux, Windows, and macOS to produce
+native packages for each platform.
+
+Useful options:
+
+```bash
+ezdeliver.sh --build-dir build/Deliver/Release --package-dir build/Deliver
+ezdeliver.sh --skip-build --format zip
+```
+
+After extracting a package, install it with one of the included installers:
+
+```bash
+sh install.sh --prefix "$HOME/.local"
+powershell -ExecutionPolicy Bypass -File install.ps1 -Prefix "C:\GameEngine"
+```
+
+For local installs from this repo, use:
+
+```bash
+ezinstall.sh
+ezinstall.sh --prefix "C:/GameEngine"
+ezinstall.sh --package build/Deliver/stage/gameengine-0.1.0-windows-x86-64
+```
+
+`--prefix` selects the install destination. `--package` selects a staged or extracted package
+directory to install from.
+
 ## Project Layout
 
 - `src/Engine/Core`: engine paths and engine-owned logging handles.
@@ -152,7 +193,9 @@ outside the default `build/Gaunlet` directory.
 - `scripts/build`: build configuration helpers, build matrix checks, and commit helper.
 - `scripts/core`: shared script output helpers and `ezprepare.sh` command publishing.
 - `scripts/coverage`: coverage build, test, and report generation.
+- `scripts/deliver`: host package staging and installer generation.
 - `scripts/format`: source formatting helper.
+- `scripts/install`: local install helper for staged delivery packages.
 - `scripts/run`: executable launcher.
 - `scripts/test`: CTest wrapper and shared test-script helper.
 - `docs/dependencies.md`: platform dependency setup and vcpkg notes.
