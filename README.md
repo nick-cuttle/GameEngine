@@ -15,9 +15,9 @@ For project vocabulary, subsystem boundaries, and architectural decisions, start
 - `clang-format` for `ezformat.sh`
 - `gcovr` for `ezcoverage.sh`
 
-The engine code targets Linux and Windows. The helper scripts select Unix Makefiles on Linux and
-MinGW Makefiles on MSYS or MinGW shells. For other Windows generators, use the equivalent CMake
-commands directly.
+The engine code targets Linux and Windows. The helper scripts prefer Ninja when it is available,
+then fall back to Unix Makefiles on Linux and MinGW Makefiles on MSYS or MinGW shells. Set
+`ENGINE_CMAKE_GENERATOR` to override the generated build system.
 
 ## Helper Scripts
 
@@ -27,8 +27,9 @@ Prepare shell commands for the moved script layout:
 source scripts/core/ezprepare.sh
 ```
 
-This creates symbolic links in `scripts/scripts` and prepends that directory to `PATH`. On Windows,
-native symlink creation requires Developer Mode or equivalent symlink privileges.
+This publishes the nested `ez*.sh` helpers into the ignored `scripts/scripts` command directory and
+prepends that directory to `PATH`. Linux shells receive symbolic links; MSYS, MinGW, and Cygwin
+shells receive small executable shims so Windows symlink privileges are not required.
 
 ## Building
 
@@ -81,6 +82,10 @@ After building, run the executable from the chosen configuration:
 The `ezrun.sh` helper defaults to `build/Release` and accepts a build directory argument.
 It checks for both `GameEngine` and `GameEngine.exe`.
 
+```bash
+ezrun.sh build/Debug
+```
+
 ## Testing
 
 Build first, then run unit tests with:
@@ -121,14 +126,19 @@ ezcoverage.sh build/Coverage/Debug
 
 Coverage output is written to `coverage/index.html` and `coverage/coverage.xml`.
 
-Run the build gaunlet across the main CMake option matrix:
+With no build directory, `ezcoverage.sh` runs `build/Coverage/Debug` and then
+`build/Coverage/Release` before combining the report. Pass `--test <regex>`, `--label <regex>`, or
+`--open` for focused coverage runs and automatic report opening.
+
+Run the build matrix across the main CMake option combinations:
 
 ```bash
 ezgaunlet.sh
 ```
 
-This builds Debug and Release variants while toggling tests, warnings-as-errors, and dependency
-fetching. Use `ezgaunlet.sh --help` for heavier SDL fetch variants and test execution.
+This builds Debug and Release variants while toggling `BUILD_TESTS` and
+`ENGINE_WARNINGS_AS_ERRORS`. Use `ezgaunlet.sh --build-root <dir>` to write the matrix builds
+outside the default `build/Gaunlet` directory.
 
 ## Project Layout
 
@@ -139,7 +149,12 @@ fetching. Use `ezgaunlet.sh --help` for heavier SDL fetch variants and test exec
 - `src/main.cpp`: executable startup and primary-window runtime loop.
 - `tests/unit`: Catch2 unit tests registered with CTest.
 - `tests/support`: shared test harness helpers.
-- `scripts`: local build, test, format, coverage, run, and path helpers.
+- `scripts/build`: build configuration helpers, build matrix checks, and commit helper.
+- `scripts/core`: shared script output helpers and `ezprepare.sh` command publishing.
+- `scripts/coverage`: coverage build, test, and report generation.
+- `scripts/format`: source formatting helper.
+- `scripts/run`: executable launcher.
+- `scripts/test`: CTest wrapper and shared test-script helper.
 - `docs/dependencies.md`: platform dependency setup and vcpkg notes.
 - `docs/adr`: durable architectural decisions.
 
