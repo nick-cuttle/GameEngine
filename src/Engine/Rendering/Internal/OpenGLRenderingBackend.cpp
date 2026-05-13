@@ -56,6 +56,18 @@ GLADapiproc loadOpenGLProcedure(char const *procedureName)
     return reinterpret_cast<GLADapiproc>(SDL_GL_GetProcAddress(procedureName));
 }
 
+/// @brief Configures whether the next created OpenGL context shares with the current context.
+/// @param isEnabled Whether SDL should share resources with the current OpenGL context.
+/// @throws std::runtime_error when SDL cannot update the OpenGL context sharing attribute.
+void setOpenGLContextSharing(bool isEnabled)
+{
+    if (!SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, isEnabled ? 1 : 0))
+    {
+        throw platformError(isEnabled ? "Failed to enable OpenGL context resource sharing"
+                                      : "Failed to disable OpenGL context resource sharing");
+    }
+}
+
 /// @brief Queries the drawable graphics surface size for a platform window.
 /// @param platformWindow SDL window that owns the graphics surface.
 /// @return Current drawable graphics surface size in pixels.
@@ -172,17 +184,25 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
     attachedGraphicsSurface.graphicsSurface =
         GraphicsSurfaceFactory::createOpenGLGraphicsSurface(windowSystem, windowIdentifier);
 
-    if (!implementation->graphicsSurfaceByWindowIdentifier.empty())
+    bool const shouldShareContext = !implementation->graphicsSurfaceByWindowIdentifier.empty();
+    try
     {
-        Implementation::AttachedGraphicsSurface const &sharedGraphicsSurface =
-            implementation->graphicsSurfaceByWindowIdentifier.begin()->second;
-        implementation->makeContextCurrent(sharedGraphicsSurface);
-
-        if (!SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1))
+        if (shouldShareContext)
         {
-            implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
-            throw platformError("Failed to enable OpenGL context resource sharing");
+            Implementation::AttachedGraphicsSurface const &sharedGraphicsSurface =
+                implementation->graphicsSurfaceByWindowIdentifier.begin()->second;
+            implementation->makeContextCurrent(sharedGraphicsSurface);
+            setOpenGLContextSharing(true);
         }
+        else
+        {
+            setOpenGLContextSharing(false);
+        }
+    }
+    catch (...)
+    {
+        implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
+        throw;
     }
 
     attachedGraphicsSurface.renderingContext =
@@ -190,8 +210,27 @@ void OpenGLRenderingBackend::attachGraphicsSurface(WindowSystem &windowSystem,
 
     if (attachedGraphicsSurface.renderingContext == nullptr)
     {
+        std::runtime_error const contextCreationError =
+            platformError("Failed to create OpenGL context");
+        if (shouldShareContext)
+        {
+            (void)SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 0);
+        }
         implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
-        throw platformError("Failed to create OpenGL context");
+        throw contextCreationError;
+    }
+
+    if (shouldShareContext)
+    {
+        try
+        {
+            setOpenGLContextSharing(false);
+        }
+        catch (...)
+        {
+            implementation->releaseAttachedGraphicsSurface(attachedGraphicsSurface);
+            throw;
+        }
     }
 
     try
