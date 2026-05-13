@@ -46,6 +46,30 @@ enum class PresentationMode
     VerticalSynchronization
 };
 
+/// @brief Preference for requesting an sRGB-capable Graphics Surface.
+/// @details This declares application color-space intent. Concrete Rendering Backends decide how
+///          to translate the preference into platform surface attributes.
+enum class SrgbSurfacePreference
+{
+    /// @brief Do not request an sRGB-capable Graphics Surface.
+    Disabled,
+    /// @brief Request an sRGB-capable Graphics Surface when the platform supports it.
+    Preferred
+};
+
+/// @brief Debug instrumentation policy requested from the active Rendering Backend.
+/// @details Automatic enables backend debug output according to build and platform support. Enabled
+///          requests it explicitly, while Disabled suppresses debug output setup.
+enum class RenderingDebugOutput
+{
+    /// @brief Use the engine's default debug-output policy for the current build.
+    Automatic,
+    /// @brief Do not request Rendering Backend debug output.
+    Disabled,
+    /// @brief Request Rendering Backend debug output when the platform supports it.
+    Enabled
+};
+
 /// @brief Engine-owned Renderer setup values.
 /// @details The configuration is explicit about backend selection and presentation timing so the
 ///          application does not depend on a hard-coded rendering backend.
@@ -55,6 +79,10 @@ struct RendererConfiguration
     RenderingBackendSelection renderingBackendSelection = RenderingBackendSelection::OpenGL;
     /// @brief Presentation timing requested from the active Rendering Backend.
     PresentationMode presentationMode = PresentationMode::VerticalSynchronization;
+    /// @brief Whether the Renderer should request an sRGB-capable Graphics Surface.
+    SrgbSurfacePreference srgbSurfacePreference = SrgbSurfacePreference::Preferred;
+    /// @brief Rendering Backend debug-output policy.
+    RenderingDebugOutput debugOutput = RenderingDebugOutput::Automatic;
 };
 
 /// @brief Public facade used by application code to render frames without owning backend commands.

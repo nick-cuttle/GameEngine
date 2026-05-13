@@ -1,4 +1,6 @@
 - Everything should be cross-compatible between Linux and Windows.
+- When running `ezbuild.sh Debug` for verification, prefer the repo-local ignored build directory
+  `build/Debug` so build artifacts stay in the working tree but remain untracked by Git.
 
 ## Agent skills
 

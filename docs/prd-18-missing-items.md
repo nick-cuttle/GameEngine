@@ -2,9 +2,9 @@
 
 The following PRD #18 items were identified as missing from the current implementation. Manual smoke verification is intentionally excluded because it is tracked separately in issue #25.
 
-1. `WindowConfiguration` is missing borderless fullscreen, decorated, and high-density options from PRD stories 12-13. Current config only has title, size, visible, resizable, and graphics surface capability in `src/Engine/Windowing/WindowSystem.hpp`.
+<!--1. `WindowConfiguration` is missing borderless fullscreen, decorated, and high-density options from PRD stories 12-13. Current config only has title, size, visible, resizable, and graphics surface capability in `src/Engine/Windowing/WindowSystem.hpp`.-->
 
-2. `RendererConfiguration` is missing sRGB preference and debug options. Current config only selects backend and presentation mode in `src/Engine/Rendering/Renderer.hpp`.
+<!--2. `RendererConfiguration` is missing sRGB preference and debug options. Current config only selects backend and presentation mode in `src/Engine/Rendering/Renderer.hpp`.-->
 
 3. sRGB-capable OpenGL surface/default path is not implemented. No `SDL_GL_FRAMEBUFFER_SRGB_CAPABLE`, `GL_FRAMEBUFFER_SRGB`, or sRGB configuration exists in `src/`.
 

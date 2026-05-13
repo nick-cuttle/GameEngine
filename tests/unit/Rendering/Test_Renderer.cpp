@@ -23,6 +23,20 @@ TEST_CASE("Renderer", "[unit][rendering][renderer]")
                 Engine::PresentationMode::VerticalSynchronization);
     }
 
+    SECTION("renderer configuration exposes sRGB and debug output preferences")
+    {
+        Engine::RendererConfiguration configuration;
+
+        REQUIRE(configuration.srgbSurfacePreference == Engine::SrgbSurfacePreference::Preferred);
+        REQUIRE(configuration.debugOutput == Engine::RenderingDebugOutput::Automatic);
+
+        configuration.srgbSurfacePreference = Engine::SrgbSurfacePreference::Disabled;
+        configuration.debugOutput = Engine::RenderingDebugOutput::Enabled;
+
+        REQUIRE(configuration.srgbSurfacePreference == Engine::SrgbSurfacePreference::Disabled);
+        REQUIRE(configuration.debugOutput == Engine::RenderingDebugOutput::Enabled);
+    }
+
     SECTION("linear color defaults to opaque black")
     {
         Engine::LinearColor color;
