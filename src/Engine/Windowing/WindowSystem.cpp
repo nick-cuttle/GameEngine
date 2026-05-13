@@ -5,10 +5,14 @@
 
 #include "WindowSystem.hpp"
 
+#include <Engine/Rendering/Internal/GraphicsSurfaceFactory.hpp>
+
 #include <SDL3/SDL.h>
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -23,6 +27,43 @@ constexpr std::uint32_t maximumPlatformWindowDimension =
 
 /// @brief Maximum bytes reserved for SDL event descriptions used in trace logging.
 constexpr int platformEventDescriptionBufferSize = 256;
+/// @brief OpenGL major version requested for engine renderer windows.
+constexpr int openGLMajorVersion = 4;
+/// @brief OpenGL minor version requested for engine renderer windows.
+constexpr int openGLMinorVersion = 6;
+
+/// @brief Converts an SDL error into a runtime exception with operation context.
+/// @param operationDescription Description of the failed SDL operation.
+/// @return Runtime exception containing the SDL error text.
+std::runtime_error platformError(char const *operationDescription)
+{
+    return std::runtime_error(std::string(operationDescription) + ": " + SDL_GetError());
+}
+
+/// @brief Sets an OpenGL window attribute before SDL chooses the window visual.
+/// @param attribute SDL OpenGL attribute to set.
+/// @param value Value assigned to the attribute.
+/// @param operationDescription Description used if SDL rejects the attribute.
+void setOpenGLWindowAttribute(SDL_GLAttr attribute, int value, char const *operationDescription)
+{
+    if (!SDL_GL_SetAttribute(attribute, value))
+    {
+        throw platformError(operationDescription);
+    }
+}
+
+/// @brief Configures the OpenGL context attributes required by renderer-capable windows.
+/// @throws std::runtime_error if SDL rejects an OpenGL attribute.
+void configureOpenGLWindowAttributes()
+{
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, openGLMajorVersion,
+                             "Failed to set OpenGL major version");
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_MINOR_VERSION, openGLMinorVersion,
+                             "Failed to set OpenGL minor version");
+    setOpenGLWindowAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE,
+                             "Failed to set OpenGL core profile");
+    setOpenGLWindowAttribute(SDL_GL_DOUBLEBUFFER, 1, "Failed to enable OpenGL double buffering");
+}
 
 /// @brief Formats an SDL event description for trace logging.
 /// @param platformEvent SDL event to describe.
@@ -189,7 +230,18 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
     int const platformWindowWidth = static_cast<int>(configuration.size.width);
     int const platformWindowHeight = static_cast<int>(configuration.size.height);
 
-    SDL_WindowFlags windowFlags = configuration.isVisible ? 0 : SDL_WINDOW_HIDDEN;
+    SDL_WindowFlags windowFlags = 0;
+
+    if (!configuration.isVisible)
+    {
+        windowFlags |= SDL_WINDOW_HIDDEN;
+    }
+
+    if (configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::OpenGL)
+    {
+        configureOpenGLWindowAttributes();
+        windowFlags |= SDL_WINDOW_OPENGL;
+    }
 
     SDL_Window *window = SDL_CreateWindow(configuration.title.c_str(), platformWindowWidth,
                                           platformWindowHeight, windowFlags);
@@ -210,7 +262,11 @@ WindowIdentifier WindowSystem::createPrimaryWindow(WindowConfiguration const &co
 
     WindowIdentifier returnedWindowIdentifier{static_cast<std::uint32_t>(windowIdentifier)};
 
-    if (configuration.isVisible)
+    bool const shouldPresentInitialVisibilityBuffer =
+        configuration.isVisible &&
+        configuration.graphicsSurfaceCapability == GraphicsSurfaceCapability::None;
+
+    if (shouldPresentInitialVisibilityBuffer)
     {
         try
         {
@@ -260,8 +316,7 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
             {
                 std::string const eventDescription = describePlatformEvent(event);
 
-                m_Logger.trace("Non-window event captured: {} ({})", eventDescription,
-                               eventType);
+                m_Logger.trace("Non-window event captured: {} ({})", eventDescription, eventType);
             }
 
             continue;
@@ -288,6 +343,45 @@ WindowEventPollResult WindowSystem::pollWindowEvents()
 
     return pollResult;
 }
+
+namespace Rendering::Internal
+{
+
+PlatformGraphicsSurface
+GraphicsSurfaceFactory::createOpenGLGraphicsSurface(WindowSystem &windowSystem,
+                                                    WindowIdentifier windowIdentifier)
+{
+    if (!windowSystem.implementation->isInitialized)
+    {
+        throw std::runtime_error(
+            "WindowSystem must be initialized before creating Graphics Surfaces.");
+    }
+
+    auto windowIterator =
+        windowSystem.implementation->windowByIdentifier.find(windowIdentifier.value);
+
+    if (windowIterator == windowSystem.implementation->windowByIdentifier.end())
+    {
+        throw std::invalid_argument(
+            "Cannot create a Graphics Surface for an unknown Window Identifier.");
+    }
+
+    int graphicsSurfaceWidth = 0;
+    int graphicsSurfaceHeight = 0;
+
+    if (!SDL_GetWindowSizeInPixels(windowIterator->second, &graphicsSurfaceWidth,
+                                   &graphicsSurfaceHeight))
+    {
+        throw std::runtime_error(SDL_GetError());
+    }
+
+    return PlatformGraphicsSurface{
+        windowIterator->second,
+        GraphicsSurfaceSize{static_cast<std::uint32_t>(std::max(graphicsSurfaceWidth, 0)),
+                            static_cast<std::uint32_t>(std::max(graphicsSurfaceHeight, 0))}};
+}
+
+} // namespace Rendering::Internal
 
 void WindowSystem::releaseResources() noexcept
 {
