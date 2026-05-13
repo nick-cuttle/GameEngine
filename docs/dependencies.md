@@ -139,10 +139,11 @@ cmake --build build/Debug
 
 ## Dependency Versions
 
-The pinned fallback and vcpkg manifest versions are:
+The pinned FetchContent fallback versions are:
 
 - SDL3 `3.4.8`
 - fmt `12.1.0`
+- glad `v2.0.8`
 - spdlog `1.17.0`
 - Catch2 `3.14.0`
 

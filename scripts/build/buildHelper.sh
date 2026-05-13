@@ -16,6 +16,13 @@ BUILD_HELPER_CMAKE_ARGS=""
 BUILD_HELPER_USING_VCPKG=0
 BUILD_HELPER_JOBS=""
 
+enable_default_vcpkg_binary_cache() {
+    if [ -z "$VCPKG_DEFAULT_BINARY_CACHE" ]; then
+        export VCPKG_DEFAULT_BINARY_CACHE="$(pwd)/.vcpkg-cache"
+    fi
+    mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+}
+
 # Initializes common variables for build-family scripts. This should be called at the start of each script
 init_build_helper() {
     BUILD_HELPER_SYSTEM_NAME="$(uname -s)"
@@ -64,10 +71,7 @@ init_build_helper() {
         fi
 
         # Default cache location to current directory if not environment variable.
-        if [ -z "$VCPKG_DEFAULT_BINARY_CACHE" ]; then
-            export VCPKG_DEFAULT_BINARY_CACHE="$(pwd)/.vcpkg-cache"
-        fi
-        mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+        enable_default_vcpkg_binary_cache
     fi
 }
 
@@ -134,16 +138,18 @@ print_configure_log() {
 summarize_vcpkg_dependencies() {
     configure_log=$1
 
-    [ "$BUILD_HELPER_USING_VCPKG" -eq 1 ] || return 0
     [ -f "$configure_log" ] || return 0
+    if [ "$BUILD_HELPER_USING_VCPKG" -ne 1 ] && ! grep -F -- "-- Running vcpkg install" "$configure_log" >/dev/null; then
+        return 0
+    fi
 
     # Common dependencies to check for
-    for dependency in catch2 fmt sdl3 spdlog; do
-        if grep -E "Restored .* package\(s\)" "$configure_log" >/dev/null &&
+    for dependency in catch2 fmt glad sdl3 spdlog; do
+        if grep -E "Building ${dependency}(:|\\[)" "$configure_log" >/dev/null; then
+            print_status "$COLOR_YELLOW" "vcpkg built $dependency from source"
+        elif grep -E "Restored .* package\(s\)" "$configure_log" >/dev/null &&
             grep -E "(Installing|Removing) [0-9]+/[0-9]+ ${dependency}(:|\\[)" "$configure_log" >/dev/null; then
             print_status "$COLOR_GREEN" "vcpkg restored $dependency from binary cache"
-        elif grep -E "Building ${dependency}(:|\\[)" "$configure_log" >/dev/null; then
-            print_status "$COLOR_YELLOW" "vcpkg built $dependency from source"
         elif grep -E "^    ${dependency}(:|\\[)" "$configure_log" >/dev/null &&
             grep -F "The following packages are already installed:" "$configure_log" >/dev/null; then
             print_status "$COLOR_GREEN" "vcpkg already had $dependency installed"
@@ -160,6 +166,13 @@ configure_build() {
     extra_cmake_args=$4
 
     mkdir -p "$build_dir"
+    cmake_cache="$build_dir/CMakeCache.txt"
+    if [ "$BUILD_HELPER_USING_VCPKG" -ne 1 ] && [ -f "$cmake_cache" ] &&
+        grep -i "vcpkg.*buildsystems.*vcpkg.cmake" "$cmake_cache" >/dev/null; then
+        BUILD_HELPER_USING_VCPKG=1
+        enable_default_vcpkg_binary_cache
+    fi
+
     print_status "$COLOR_BLUE" "Using CMake generator: $BUILD_HELPER_GENERATOR"
 
     # BUILD_HELPER_CMAKE_ARGS and extra_cmake_args intentionally remain word-split so each -D flag
