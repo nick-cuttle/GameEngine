@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(GameEngine LANGUAGES C CXX)
+project(GameEngine VERSION 0.1.0 LANGUAGES C CXX)
+
+include(GNUInstallDirs)
 
 option(ENGINE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(BUILD_TESTS "Build engine tests" ON)
